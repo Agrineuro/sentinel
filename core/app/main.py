@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.database.session import Base, engine
 from app.models import asset  # noqa: F401
+from app.api.core.connectors.ssh import router as ssh_connector_router
 
 configure_logging()
 
@@ -19,3 +20,4 @@ app = FastAPI(
 
 app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(assets_router, prefix=settings.api_prefix)
+app.include_router(ssh_connector_router, prefix=settings.api_prefix)
