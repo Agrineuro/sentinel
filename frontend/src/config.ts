@@ -11,25 +11,16 @@ export interface SentinelSettings {
 }
 
 function getDefaultApiBaseUrl(): string {
-  if (import.meta.env.PROD && typeof window !== 'undefined') {
-    return window.location.origin + '/api/v1'
-  }
   if (typeof window !== 'undefined') {
-    const apiOrigin = new URL(window.location.origin)
-    apiOrigin.port = '18101'
-    return apiOrigin.origin + '/api/v1'
+    return window.location.origin + '/api/v1'
   }
   return 'http://localhost:18101/api/v1'
 }
 
 function getDefaultWebsocketUrl(): string {
-  if (import.meta.env.PROD && typeof window !== 'undefined') {
-    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return scheme + '//' + window.location.host + '/api/v1/events/ws'
-  }
   if (typeof window !== 'undefined') {
     const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    return scheme + '//' + window.location.hostname + ':18101/api/v1/events/ws'
+    return scheme + '//' + window.location.host + '/api/v1/events/ws'
   }
   return 'ws://localhost:18101/api/v1/events/ws'
 }
