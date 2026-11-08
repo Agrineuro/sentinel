@@ -171,7 +171,11 @@ export async function createConnector(settings: SentinelSettings, payload: {
 }): Promise<ConnectorCreateResult> {
   return request<ConnectorCreateResult>(settings, '/connectors', { method: 'POST', body: JSON.stringify(payload) })
 }
-export async function updateConnector(settings: SentinelSettings, id: string, patch: { enabled?: boolean; name?: string }): Promise<Connector> {
+export async function updateConnector(settings: SentinelSettings, id: string, patch: {
+  enabled?: boolean
+  name?: string
+  translation_field_map?: Record<string, string>
+}): Promise<Connector> {
   const row = await request<Record<string, unknown>>(settings, '/connectors/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(patch) })
   return normalizeConnector(row)
 }

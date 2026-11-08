@@ -29,13 +29,22 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
     setBusy(true); setError(''); setNotice(''); setWebhookToken('')
     try {
       const name = String(form.get('name') || '').trim()
-      const config = kind === 'webhook' ? {} : {
-        host: String(form.get('host') || '').trim(),
-        port: Number(form.get('port') || 1883),
-        topic: String(form.get('topic') || '').trim(),
-        qos: Number(form.get('qos') || 0),
-        tls: form.get('tls') === 'on',
-        ...(String(form.get('client_id') || '').trim() ? { client_id: String(form.get('client_id')).trim() } : {}),
+      const fieldMap = Object.fromEntries(
+        ['type', 'severity', 'summary', 'timestamp', 'entity', 'entity_id', 'value']
+          .map(target => [target, String(form.get('map_' + target) || '').trim()])
+          .filter(([, path]) => path),
+      )
+      const translation = Object.keys(fieldMap).length ? { translation: { field_map: fieldMap } } : {}
+      const config = {
+        ...(kind === 'mqtt' ? {
+          host: String(form.get('host') || '').trim(),
+          port: Number(form.get('port') || 1883),
+          topic: String(form.get('topic') || '').trim(),
+          qos: Number(form.get('qos') || 0),
+          tls: form.get('tls') === 'on',
+          ...(String(form.get('client_id') || '').trim() ? { client_id: String(form.get('client_id')).trim() } : {}),
+        } : {}),
+        ...translation,
       }
       const result = await createConnector(settings, {
         name, connector_type: kind, enabled: true, config,
@@ -116,6 +125,19 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
           </div>
         </details>
       </>}
+      <details className="connector-advanced connector-translation"><summary>Advanced: map this system’s fields to Sentinel</summary>
+        <p>Sentinel detects common field names automatically. Add a dot-separated path only when your system uses different names. The original message is always kept for troubleshooting.</p>
+        <div className="connector-advanced-grid">
+          <label><span>Event type path</span><input name="map_type" placeholder="event.kind"/></label>
+          <label><span>Severity path</span><input name="map_severity" placeholder="alert.priority"/></label>
+          <label><span>Summary path</span><input name="map_summary" placeholder="alarm.message"/></label>
+          <label><span>Timestamp path</span><input name="map_timestamp" placeholder="event.created_at"/></label>
+          <label><span>System name path</span><input name="map_entity" placeholder="device.name"/></label>
+          <label><span>System ID path</span><input name="map_entity_id" placeholder="device.id"/></label>
+          <label><span>Event data path</span><input name="map_value" placeholder="sensor.reading"/></label>
+        </div>
+        <small>Paths use object keys separated by dots. Example: alarm.message reads the message field inside alarm.</small>
+      </details>
       <button className="primary-button" disabled={busy}><Plus size={15}/>{busy ? 'Creating…' : 'Create connector'}</button>
       {error && <span className="form-error" role="alert">{error}</span>}
       {notice && <span className="connector-notice" role="status">{notice}</span>}
@@ -126,13 +148,32 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
         const id = connector.id || ''
         const webhook = connector.connector_type === 'webhook'
         const endpoint = connector.ingest_path ? webhookUrl(connector.ingest_path) : ''
+        const currentFieldMap = ((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map) || {}
+        const translationTargets = ['type', 'severity', 'summary', 'timestamp', 'entity', 'entity_id', 'value']
         return <article className="panel connector-card" key={id}>
           <div className="connector-card-heading"><span className={'connector-dot ' + connector.status}/><div><h2>{connector.name}</h2><small>{webhook?'Webhook receiver':'MQTT subscription'} · {connector.direction || 'inbound'}</small></div><span className={'health-chip ' + connector.status}>{connector.state || connector.status}</span></div>
           <dl><dt>State</dt><dd>{connector.enabled ? (connector.state || 'enabled') : 'paused'}</dd>
             {webhook ? <><dt>Ingest URL</dt><dd><code>{endpoint}</code></dd><dt>Secret</dt><dd>Stored as a hash; visible only when created</dd></> :
               <><dt>Broker</dt><dd>{String(connector.config?.host || 'Unknown')}:{String(connector.config?.port || 1883)}</dd><dt>Topic</dt><dd><code>{String(connector.config?.topic || 'Not set')}</code></dd><dt>Last check</dt><dd>{connector.last_checked_at ? new Date(connector.last_checked_at).toLocaleString() : 'Not checked'}</dd></>}
+            <dt>Translation</dt><dd>{Object.keys((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map || {}).length
+              ? Object.keys((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map || {}).length + ' custom field paths'
+              : 'Automatic common-field detection'}</dd>
             {connector.last_error && <><dt>Last error</dt><dd className="form-error">{connector.last_error}</dd></>}
           </dl>
+          <details className="connector-map-edit"><summary>Configure message translation</summary>
+            <p>Map fields from this connector’s JSON messages into Sentinel’s common event fields. Leave a path blank to use automatic detection. Changes apply to new messages.</p>
+            <form onSubmit={event=>{
+              event.preventDefault()
+              const form = new FormData(event.currentTarget)
+              const fieldMap = Object.fromEntries(translationTargets
+                .map(target => [target, String(form.get(target) || '').trim()])
+                .filter(([, path]) => path))
+              void runAction(id, ()=>updateConnector(settings, id, { translation_field_map: fieldMap }))
+            }}>
+              {translationTargets.map(target=><label key={target}><span>{target.replace('_', ' ')} path</span><input name={target} defaultValue={currentFieldMap[target] || ''} placeholder={target==='summary'?'alarm.message':target==='value'?'sensor.reading':target==='entity'?'device.name':''}/></label>)}
+              <button className="secondary-button" disabled={workingId===id}>Save translation</button>
+            </form>
+          </details>
           {webhook && <small className="connector-help">The sender must be able to reach this URL. If the API address above uses localhost, change the dashboard API address to a host reachable by that sender.</small>}
           <div className="connector-card-actions">
             <button className="secondary-button" disabled={workingId===id} onClick={()=>void runAction(id,async()=>{const result=await testConnector(settings,id);setNotice(result.message)})}>{workingId===id?'Working…':'Test'}</button>

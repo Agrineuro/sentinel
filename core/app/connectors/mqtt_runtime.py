@@ -103,8 +103,10 @@ class MQTTConnectorRuntime:
                 payload = json.loads(message.payload.decode("utf-8"))
                 if not isinstance(payload, dict):
                     payload = {"data": payload, "summary": "MQTT message on " + message.topic}
-                payload.setdefault("type", "mqtt.message")
-                payload.setdefault("summary", "MQTT message on " + message.topic)
+                if not any(payload.get(key) for key in ("type", "event_type")):
+                    payload["type"] = "mqtt.message"
+                if not any(payload.get(key) for key in ("summary", "message", "description")):
+                    payload["summary"] = "MQTT message on " + message.topic
                 payload.setdefault("value", payload.get("data"))
                 result = _ingest(connector_id, payload)
                 if result and current_loop and current_loop.is_running():

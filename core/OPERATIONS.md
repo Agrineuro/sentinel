@@ -30,3 +30,19 @@ The startup migration runner records applied schema versions and applies SQLite 
 Set API_KEY to a long random value in core/.env. Set ENVIRONMENT=production to require an API key; production mode refuses API requests if no key is configured. Enter the same key in Settings → Backend connection → API key in each browser. The key stays out of the frontend build and is sent in an authorization header for REST and a WebSocket subprotocol for live events. The health endpoint remains public and reports whether authentication is required.
 
 The dashboard stores the key in that browser's local settings. Use HTTPS when exposing Sentinel beyond a trusted local network.
+
+
+## Inbound message translation
+
+Webhook and MQTT messages are translated into Sentinel's common event fields before storage and rule evaluation. Automatic detection recognizes common names such as `event_type`, `message`, `level`, `data`, and `device.name`. A connector can override any field with a dot-separated JSON object path under its translation settings.
+
+Example field map:
+
+    {
+      "summary": "alarm.message",
+      "severity": "alarm.priority",
+      "entity": "device.name",
+      "value": "sensor.reading"
+    }
+
+Supported targets are `type`, `severity`, `summary`, `timestamp`, `entity`, `entity_id`, and `value`. Original source JSON is retained in each observation's raw data. This first translation layer normalizes incoming data into Sentinel; sending translated data to another system and routing messages between connectors are later capabilities.

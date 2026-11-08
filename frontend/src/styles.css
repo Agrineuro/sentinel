@@ -166,3 +166,12 @@
 .theme-light .connector-payload-guide pre,.theme-light .connector-advanced-grid input,.theme-light .connector-advanced-grid select{background:#fff;color:#24364a}
 @media(max-width:1000px){.connector-advanced-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.connector-advanced-grid{grid-template-columns:1fr}}
+
+.connector-map-edit{margin-top:12px;padding:10px;border:1px solid var(--border);border-radius:8px}
+.connector-map-edit summary{cursor:pointer;color:#88bfff;font-size:11px}
+.connector-map-edit p{margin:8px 0;color:var(--muted);font-size:10px;line-height:1.5}
+.connector-map-edit form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.connector-map-edit label{display:flex;min-width:0;flex-direction:column;gap:5px;color:var(--muted);font-size:10px}
+.connector-map-edit input{width:100%;min-width:0;height:34px;border:1px solid var(--border);border-radius:7px;background:#071522;color:var(--text);padding:7px 9px}
+.connector-map-edit button{grid-column:1/-1;justify-self:start}
+.theme-light .connector-map-edit input{background:#fff;color:#24364a}

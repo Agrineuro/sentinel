@@ -8,8 +8,6 @@ from app.schemas.connectors import ConnectorCreate, ConnectorRead, ConnectorUpda
 from app.schemas.vault import CredentialCreate
 from app.vault.service import vault_service
 
-SAFE_MQTT_CONFIG = {"host", "port", "topic", "qos", "tls", "client_id"}
-
 class ConnectorService:
     def list(self, db: Session) -> list[ConnectorRead]:
         rows = db.query(ConnectorModel).order_by(ConnectorModel.name.asc()).all()
@@ -29,15 +27,17 @@ class ConnectorService:
             credential_id = credential.id
         token = secrets.token_urlsafe(32) if payload.connector_type == "webhook" else None
         config = {}
+        translation = payload.config.get("translation") or {}
+        config = {"translation": {"field_map": dict(translation.get("field_map") or {})}} if translation.get("field_map") else {}
         if payload.connector_type == "mqtt":
-            config = {
+            config.update({
                 "host": str(payload.config["host"]).strip(),
                 "port": int(payload.config.get("port", 1883)),
                 "topic": str(payload.config["topic"]).strip(),
                 "qos": int(payload.config.get("qos", 0)),
                 "tls": bool(payload.config.get("tls", False)),
                 "client_id": str(payload.config.get("client_id") or ("sentinel-" + uuid4().hex[:12])),
-            }
+            })
         model = ConnectorModel(
             id="conn_" + uuid4().hex,
             name=payload.name.strip(),
@@ -68,6 +68,10 @@ class ConnectorService:
                 model.last_error = None
             else:
                 model.status = "starting"
+        if "translation_field_map" in payload.model_fields_set:
+            config = dict(model.config or {})
+            config["translation"] = {"field_map": payload.translation_field_map or {}}
+            model.config = config
         model.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(model)

@@ -109,6 +109,18 @@ Success Criteria:
 
 Sentinel discovers and inventories infrastructure automatically.
 
+### Shared message translation
+
+* Normalize incoming connector messages into Sentinel's canonical event fields.
+* Allow connector-specific field mappings for source schemas.
+* Preserve the original message for audit and troubleshooting.
+* Translate Sentinel events into destination-specific formats and route them to selected systems.
+* Apply explicit policy to decide which systems may communicate and which actions are allowed.
+
+Success Criteria:
+
+A message from one supported system can be translated by Sentinel and delivered to another supported system when the operator enables that path.
+
 ---
 
 # Phase 3 — Web Interface

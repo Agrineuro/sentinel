@@ -1,6 +1,22 @@
 from datetime import datetime
+import re
 from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
+
+FIELD_MAP_TARGETS = {"type", "severity", "summary", "timestamp", "entity", "entity_id", "value"}
+
+
+def validate_field_map(field_map):
+    if not isinstance(field_map, dict):
+        raise ValueError("Translation field map must be an object")
+    if set(field_map) - FIELD_MAP_TARGETS:
+        raise ValueError("Translation field map contains an unsupported target")
+    for target, path in field_map.items():
+        if not isinstance(path, str) or len(path) > 200:
+            raise ValueError(f"Translation path for {target} must be a short dotted field path")
+        if not all(re.fullmatch(r"[A-Za-z0-9_-]{1,80}", part) for part in path.split(".")):
+            raise ValueError(f"Translation path for {target} must use dot-separated JSON object keys")
+
 
 class ConnectorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
@@ -12,6 +28,9 @@ class ConnectorCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_connector_config(self):
+        translation = self.config.get("translation") or {}
+        field_map = translation.get("field_map", {}) if isinstance(translation, dict) else None
+        validate_field_map(field_map)
         if self.connector_type == "mqtt":
             if not str(self.config.get("host") or "").strip():
                 raise ValueError("MQTT host is required")
@@ -33,6 +52,13 @@ class ConnectorCreate(BaseModel):
 class ConnectorUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     enabled: bool | None = None
+    translation_field_map: dict[str, str] | None = None
+
+    @model_validator(mode="after")
+    def validate_translation(self):
+        if self.translation_field_map is not None:
+            validate_field_map(self.translation_field_map)
+        return self
 
 class ConnectorRead(BaseModel):
     id: str
