@@ -13,10 +13,25 @@ export interface SentinelSettings {
   roleName: string
 }
 
+function getDefaultApiBaseUrl(): string {
+  if (import.meta.env.PROD && typeof window !== 'undefined') {
+    return window.location.origin + '/api/v1'
+  }
+  return 'http://localhost:18101/api/v1'
+}
+
+function getDefaultWebsocketUrl(): string {
+  if (import.meta.env.PROD && typeof window !== 'undefined') {
+    const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return scheme + '//' + window.location.host + '/api/v1/events/ws'
+  }
+  return 'ws://localhost:18101/api/v1/events/ws'
+}
+
 export const defaultSettings: SentinelSettings = {
-  apiBaseUrl: 'http://localhost:18101/api/v1',
+  apiBaseUrl: getDefaultApiBaseUrl(),
   apiKey: '',
-  websocketUrl: 'ws://localhost:18101/api/v1/events/ws',
+  websocketUrl: getDefaultWebsocketUrl(),
   useMockFallback: false,
   reconnectSeconds: 5,
   graphAnimation: true,
@@ -34,7 +49,12 @@ export function loadSettings(): SentinelSettings {
 
     if (!saved) return defaultSettings
     const settings = { ...defaultSettings, ...JSON.parse(saved) }
-    if (settings.apiBaseUrl === 'http://192.168.1.192:18101/api/v1') {
+    const previousDevelopmentUrls = new Set([
+      'http://localhost:18101/api/v1',
+      'http://127.0.0.1:18101/api/v1',
+      'http://192.168.1.192:18101/api/v1',
+    ])
+    if (previousDevelopmentUrls.has(settings.apiBaseUrl)) {
       settings.apiBaseUrl = defaultSettings.apiBaseUrl
       settings.websocketUrl = defaultSettings.websocketUrl
     }

@@ -4,6 +4,18 @@
 
 > **Build a home for your digital world.**
 
+## Quick start with Docker
+
+Requirements: Docker Engine and the Docker Compose plugin.
+
+    git clone https://github.com/Agrineuro/sentinel.git
+    cd sentinel
+    ./scripts/install-docker.sh
+
+Open http://localhost:8080, then enter the `API_KEY` from the private `.env` file in **Settings → Backend connection**. The installer creates both required secrets and starts the dashboard and Core. Data is kept in a named Docker volume.
+
+For LAN access, updates, backups, restore, and security guidance, see [Docker deployment](docs/DOCKER_DEPLOYMENT.md).
+
 ---
 
 # The Sentinel Manifesto
