@@ -7,9 +7,11 @@ import {
   Search,
   Settings,
   Sun,
+  LogOut,
 } from 'lucide-react'
 
 import type { SentinelSettings } from '../config'
+import type { SentinelUser } from '../api/auth'
 import type { Asset, ObservationRecord, PageKey, SystemHealth } from '../types'
 
 interface TopbarProps {
@@ -17,6 +19,8 @@ interface TopbarProps {
   assetCount: number
   alertCount: number
   settings: SentinelSettings
+  user: SentinelUser
+  onLogout: () => void
   assets: Asset[]
   observations: ObservationRecord[]
   onNavigate: (page: PageKey) => void
@@ -39,6 +43,8 @@ export function Topbar({
   assetCount,
   alertCount,
   settings,
+  user,
+  onLogout,
   assets,
   observations,
   onNavigate,
@@ -135,15 +141,17 @@ export function Topbar({
           title="Current user"
         >
           <span className="avatar">
-            {getInitials(settings.displayName)}
+            {getInitials(user.display_name)}
           </span>
 
           <span className="profile-copy">
-            <strong>{settings.displayName}</strong>
-            <small>{settings.roleName}</small>
+            <strong>{user.display_name}</strong>
+            <small>{user.role}</small>
           </span>
 
         </div>
+
+        <button className="icon-button" onClick={onLogout} title="Sign out" aria-label="Sign out"><LogOut size={17} /></button>
       </div>
     </header>
   )

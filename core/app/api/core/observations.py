@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.observations import Observation, ObservationCreate
@@ -24,7 +25,7 @@ async def list_observations(
         severity=severity, source=source, entity_id=entity_id, search=search,
     )
 
-@router.post("", response_model=Observation, status_code=201)
+@router.post("", response_model=Observation, status_code=201, dependencies=[Depends(require_operator)])
 async def create_observation(payload: ObservationCreate, db: Session = Depends(get_db)):
     row = observation_registry.add(db, payload)
     result = observation_registry.to_schema(row)

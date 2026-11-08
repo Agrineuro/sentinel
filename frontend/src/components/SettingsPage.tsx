@@ -4,13 +4,13 @@ import {
   RefreshCw,
   Save,
   Server,
-  User,
   Wifi,
   XCircle,
 } from 'lucide-react'
 
 import { testConnection } from '../api/client'
 import type { SentinelSettings } from '../config'
+import { AccountManagementPanel } from './AccountManagementPanel'
 
 interface Props {
   settings: SentinelSettings
@@ -34,7 +34,7 @@ export function SettingsPage({ settings, onSave }: Props) {
 
       setResult({
         ok: true,
-        message: 'Connected in ' + response.latencyMs + ' ms · ' + response.health.status + ' · ' + (response.health.authenticationRequired ? 'API key required' : 'API key not enabled'),
+        message: 'Connected in ' + response.latencyMs + ' ms - ' + response.health.status + ' - account sign-in is enabled',
       })
     } catch (error) {
       setResult({
@@ -72,6 +72,7 @@ export function SettingsPage({ settings, onSave }: Props) {
       </div>
 
       <div className="settings-grid">
+        <AccountManagementPanel />
         <section className="panel settings-card">
           <div className="settings-card-title">
             <Server size={19} />
@@ -99,17 +100,6 @@ export function SettingsPage({ settings, onSave }: Props) {
             />
           </label>
 
-          <label>
-            <span>API key</span>
-            <input
-              type="password"
-              autoComplete="off"
-              value={draft.apiKey}
-              onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-              placeholder="Only required when Core authentication is enabled"
-            />
-            <small>Stored in this browser. Configure the matching API_KEY on the Core server.</small>
-          </label>
 
           <label>
             <span>WebSocket URL</span>
@@ -185,49 +175,6 @@ export function SettingsPage({ settings, onSave }: Props) {
               {result.message}
             </div>
           )}
-        </section>
-
-        <section className="panel settings-card">
-          <div className="settings-card-title">
-            <User size={19} />
-
-            <div>
-              <h2>Display identity</h2>
-              <p>
-                These labels personalize the interface; they do not grant access.
-              </p>
-            </div>
-          </div>
-
-          <label>
-            <span>Display name</span>
-
-            <input
-              value={draft.displayName}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  displayName: event.target.value,
-                })
-              }
-              placeholder="Administrator"
-            />
-          </label>
-
-          <label>
-            <span>Role label (display only)</span>
-
-            <input
-              value={draft.roleName}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  roleName: event.target.value,
-                })
-              }
-              placeholder="Administrator"
-            />
-          </label>
         </section>
 
         <section className="panel settings-card">

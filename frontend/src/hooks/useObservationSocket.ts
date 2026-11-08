@@ -15,8 +15,7 @@ export function useObservationSocket(settings: SentinelSettings, onObservation: 
 
     const connect = () => {
       if (stopped || !settings.websocketUrl) return
-      const protocols = settings.apiKey ? ['sentinel', 'token.' + settings.apiKey] : undefined
-      socket = new WebSocket(settings.websocketUrl, protocols)
+      socket = new WebSocket(settings.websocketUrl, ['sentinel'])
       socket.onopen = () => setConnected(true)
       socket.onclose = () => {
         setConnected(false)
@@ -48,7 +47,7 @@ export function useObservationSocket(settings: SentinelSettings, onObservation: 
       if (reconnectTimer) window.clearTimeout(reconnectTimer)
       socket?.close()
     }
-  }, [settings.websocketUrl, settings.reconnectSeconds, settings.apiKey])
+  }, [settings.websocketUrl, settings.reconnectSeconds])
 
   return { connected, lastEventAt }
 }

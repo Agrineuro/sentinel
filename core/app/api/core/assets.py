@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -10,7 +11,7 @@ from app.services.observation_hub import observation_hub
 router = APIRouter(prefix="/assets", tags=["assets"])
 
 
-@router.post("", response_model=Asset)
+@router.post("", response_model=Asset, dependencies=[Depends(require_operator)])
 async def create_asset(payload: AssetCreate, db: Session = Depends(get_db)):
     return await asset_registry.create_asset(db, payload)
 
@@ -31,7 +32,7 @@ async def list_assets(
     )
 
 
-@router.patch("/{asset_id}", response_model=Asset)
+@router.patch("/{asset_id}", response_model=Asset, dependencies=[Depends(require_operator)])
 async def update_asset(asset_id: str, payload: AssetUpdate, db: Session = Depends(get_db)):
     asset = asset_registry.update_asset(db, asset_id, payload)
     if asset is None:
@@ -39,14 +40,14 @@ async def update_asset(asset_id: str, payload: AssetUpdate, db: Session = Depend
     return asset
 
 
-@router.delete("/{asset_id}", status_code=204)
+@router.delete("/{asset_id}", status_code=204, dependencies=[Depends(require_operator)])
 async def delete_asset(asset_id: str, db: Session = Depends(get_db)):
     if not asset_registry.delete_asset(db, asset_id):
         raise HTTPException(status_code=404, detail="Asset not found")
     return Response(status_code=204)
 
 
-@router.post("/refresh")
+@router.post("/refresh", dependencies=[Depends(require_operator)])
 async def refresh_system_health(db: Session = Depends(get_db)):
     systems = refresh_assets(db)
     for system in systems:

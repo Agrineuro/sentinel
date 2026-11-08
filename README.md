@@ -12,7 +12,7 @@ Requirements: Docker Engine and the Docker Compose plugin.
     cd sentinel
     ./scripts/install-docker.sh
 
-Open http://localhost:8080, then enter the `API_KEY` from the private `.env` file in **Settings → Backend connection**. The installer creates both required secrets and starts the dashboard and Core. Data is kept in a named Docker volume.
+Open http://localhost:8080 and create the first administrator account. The installer creates a private `.env` with the vault encryption key; database data is kept in a named Docker volume.
 
 For LAN access, updates, backups, restore, and security guidance, see [Docker deployment](docs/DOCKER_DEPLOYMENT.md).
 

@@ -36,9 +36,8 @@ async def health_check():
         database_status = "healthy"
     except Exception:
         database_status = "unavailable"
-    auth_ready = settings.environment.casefold() != "production" or bool(settings.api_key)
     return {
-        "status": "healthy" if database_status == "healthy" and auth_ready else "degraded",
+        "status": "healthy" if database_status == "healthy" else "degraded",
         "service": "sentinel-backend",
         "database": database_status,
         "authentication_required": bool(settings.api_key) or settings.environment.casefold() == "production",

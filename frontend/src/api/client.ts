@@ -10,6 +10,7 @@ import type {
   ReportSummary,
 } from '../types'
 import type { SentinelSettings } from '../config'
+import { getCsrfToken } from './auth'
 
 export class ApiError extends Error {
   constructor(message: string, public status?: number) {
@@ -26,14 +27,16 @@ async function request<T>(
 
   const response = await fetch(`${base}${path}`, {
     ...init,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(settings.apiKey ? { 'X-Sentinel-Token': settings.apiKey } : {}),
+      ...(['POST', 'PUT', 'PATCH', 'DELETE'].includes((init?.method ?? 'GET').toUpperCase()) ? { 'X-CSRF-Token': getCsrfToken() } : {}),
       ...(init?.headers ?? {}),
     },
   })
 
   if (!response.ok) {
+    if (response.status === 401) window.dispatchEvent(new Event('sentinel:auth-expired'))
     let message = response.status + ' ' + response.statusText
     try {
       const body = await response.json() as { detail?: unknown }
@@ -111,8 +114,8 @@ export async function updateAsset(settings: SentinelSettings, id: string, patch:
 }
 export async function deleteAsset(settings: SentinelSettings, id: string): Promise<void> {
   const base = settings.apiBaseUrl.replace(/\/$/, '')
-  const response = await fetch(base + '/assets/' + encodeURIComponent(id), { method: 'DELETE', headers: settings.apiKey ? { 'X-Sentinel-Token': settings.apiKey } : {} })
-  if (!response.ok) throw new ApiError(response.status + ' ' + response.statusText, response.status)
+  const response = await fetch(base + '/assets/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include', headers: { 'X-CSRF-Token': getCsrfToken() } })
+  if (!response.ok) { if (response.status === 401) window.dispatchEvent(new Event('sentinel:auth-expired')); throw new ApiError(response.status + ' ' + response.statusText, response.status) }
 }
 
 export async function getObservations(
@@ -201,8 +204,8 @@ export async function testConnector(settings: SentinelSettings, id: string): Pro
 }
 export async function deleteConnector(settings: SentinelSettings, id: string): Promise<void> {
   const base = settings.apiBaseUrl.replace(/\/$/, '')
-  const response = await fetch(base + '/connectors/' + encodeURIComponent(id), { method: 'DELETE', headers: settings.apiKey ? { 'X-Sentinel-Token': settings.apiKey } : {} })
-  if (!response.ok) throw new ApiError(response.status + ' ' + response.statusText, response.status)
+  const response = await fetch(base + '/connectors/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include', headers: { 'X-CSRF-Token': getCsrfToken() } })
+  if (!response.ok) { if (response.status === 401) window.dispatchEvent(new Event('sentinel:auth-expired')); throw new ApiError(response.status + ' ' + response.statusText, response.status) }
 }
 
 export async function getRules(settings: SentinelSettings): Promise<RuleRecord[]> {
@@ -224,8 +227,8 @@ export async function updateRule(settings: SentinelSettings, id: string, patch: 
 }
 export async function deleteRule(settings: SentinelSettings, id: string): Promise<void> {
   const base = settings.apiBaseUrl.replace(/\/$/, '')
-  const response = await fetch(base + '/rules/' + encodeURIComponent(id), { method: 'DELETE', headers: settings.apiKey ? { 'X-Sentinel-Token': settings.apiKey } : {} })
-  if (!response.ok) throw new ApiError(response.status + ' ' + response.statusText, response.status)
+  const response = await fetch(base + '/rules/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include', headers: { 'X-CSRF-Token': getCsrfToken() } })
+  if (!response.ok) { if (response.status === 401) window.dispatchEvent(new Event('sentinel:auth-expired')); throw new ApiError(response.status + ' ' + response.statusText, response.status) }
 }
 export async function getAlerts(
   settings: SentinelSettings,
@@ -283,9 +286,10 @@ export async function deleteRelationship(
   const base = settings.apiBaseUrl.replace(/\/$/, '')
   const response = await fetch(base + '/relationships/' + encodeURIComponent(id), {
     method: 'DELETE',
-    headers: settings.apiKey ? { 'X-Sentinel-Token': settings.apiKey } : {},
+    credentials: 'include',
+    headers: { 'X-CSRF-Token': getCsrfToken() },
   })
-  if (!response.ok) throw new ApiError(response.status + ' ' + response.statusText, response.status)
+  if (!response.ok) { if (response.status === 401) window.dispatchEvent(new Event('sentinel:auth-expired')); throw new ApiError(response.status + ' ' + response.statusText, response.status) }
 }
 
 export async function discoverSSHAsset(

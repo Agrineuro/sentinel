@@ -5,6 +5,7 @@ import json
 import time
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 from app.connectors.mqtt_runtime import mqtt_runtime
 from app.connectors.http_poll_runtime import http_poll_runtime
@@ -23,7 +24,7 @@ ingest_router = APIRouter(prefix="/connectors/ingest", tags=["connector-ingest"]
 async def list_connectors(db: Session = Depends(get_db)):
     return connector_service.list(db)
 
-@router.post("", response_model=ConnectorCreated)
+@router.post("", response_model=ConnectorCreated, dependencies=[Depends(require_operator)])
 async def create_connector(payload: ConnectorCreate, db: Session = Depends(get_db)):
     try:
         model, webhook_token = connector_service.create(db, payload)
@@ -40,7 +41,7 @@ async def create_connector(payload: ConnectorCreate, db: Session = Depends(get_d
     result["webhook_token"] = webhook_token
     return result
 
-@router.patch("/{connector_id}", response_model=ConnectorRead)
+@router.patch("/{connector_id}", response_model=ConnectorRead, dependencies=[Depends(require_operator)])
 async def update_connector(connector_id: str, payload: ConnectorUpdate, db: Session = Depends(get_db)):
     model = connector_service.get(db, connector_id)
     if model is None:
@@ -63,7 +64,7 @@ async def update_connector(connector_id: str, payload: ConnectorUpdate, db: Sess
             websocket_runtime.stop(model.id)
     return connector_service.to_schema(model)
 
-@router.delete("/{connector_id}", status_code=204)
+@router.delete("/{connector_id}", status_code=204, dependencies=[Depends(require_operator)])
 async def delete_connector(connector_id: str, db: Session = Depends(get_db)):
     model = connector_service.get(db, connector_id)
     if model is None:
@@ -75,7 +76,7 @@ async def delete_connector(connector_id: str, db: Session = Depends(get_db)):
     db.commit()
     return Response(status_code=204)
 
-@router.post("/{connector_id}/test", response_model=ConnectorTestResult)
+@router.post("/{connector_id}/test", response_model=ConnectorTestResult, dependencies=[Depends(require_operator)])
 async def test_connector(connector_id: str, db: Session = Depends(get_db)):
     model = connector_service.get(db, connector_id)
     if model is None:

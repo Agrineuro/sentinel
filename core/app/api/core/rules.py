@@ -1,5 +1,6 @@
 from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Response
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.rule import RuleModel
@@ -22,7 +23,7 @@ async def list_rules(db: Session = Depends(get_db)):
     return db.query(RuleModel).order_by(RuleModel.created_at.desc()).all()
 
 
-@router.post("/preview")
+@router.post("/preview", dependencies=[Depends(require_operator)])
 async def preview_rule(payload: RuleCreate, db: Session = Depends(get_db)):
     rows = (db.query(ObservationModel)
             .order_by(ObservationModel.timestamp.desc(), ObservationModel.id.desc())
@@ -42,7 +43,7 @@ async def preview_rule(payload: RuleCreate, db: Session = Depends(get_db)):
     }
 
 
-@router.post("", response_model=Rule, status_code=201)
+@router.post("", response_model=Rule, status_code=201, dependencies=[Depends(require_operator)])
 async def create_rule(payload: RuleCreate, db: Session = Depends(get_db)):
     model = RuleModel(id=f"rule_{uuid4().hex}", **payload.model_dump())
     db.add(model)
@@ -51,7 +52,7 @@ async def create_rule(payload: RuleCreate, db: Session = Depends(get_db)):
     return model
 
 
-@router.patch("/{rule_id}", response_model=Rule)
+@router.patch("/{rule_id}", response_model=Rule, dependencies=[Depends(require_operator)])
 async def update_rule(rule_id: str, payload: RuleUpdate, db: Session = Depends(get_db)):
     model = db.query(RuleModel).filter(RuleModel.id == rule_id).first()
     if model is None:
@@ -64,7 +65,7 @@ async def update_rule(rule_id: str, payload: RuleUpdate, db: Session = Depends(g
     return model
 
 
-@router.delete("/{rule_id}", status_code=204)
+@router.delete("/{rule_id}", status_code=204, dependencies=[Depends(require_operator)])
 async def delete_rule(rule_id: str, db: Session = Depends(get_db)):
     model = db.query(RuleModel).filter(RuleModel.id == rule_id).first()
     if model is None:

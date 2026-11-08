@@ -12,9 +12,9 @@ From the repository root, run:
 
     ./scripts/install-docker.sh
 
-The script creates a private `.env` with a random API key and vault encryption key, then builds and starts the containers. It does not install Docker on the host.
+The script creates a private `.env` with a random vault encryption key, then builds and starts the containers. It does not install Docker on the host.
 
-Open the URL shown by the installer and enter the `API_KEY` from `.env` in **Settings → Backend connection**. Keep `.env` private. Back up `VAULT_KEY` securely and keep it unchanged; Sentinel needs the original key to decrypt stored connector credentials.
+Open the URL shown by the installer and create the first administrator account. Administrators can add accounts later in **Settings"��y��y� Accounts and access**. Keep `.env` private. Back up `VAULT_KEY` securely and keep it unchanged; Sentinel needs the original key to decrypt stored connector credentials.
 
 By default, the web port is bound to `127.0.0.1`. Core is available only on the internal Compose network and is reverse-proxied by the dashboard container.
 
@@ -24,7 +24,7 @@ Set `SENTINEL_BIND=0.0.0.0` in `.env`, then run:
 
     docker compose up -d
 
-Restrict access with your firewall. For access beyond a trusted local network, place Sentinel behind a TLS reverse proxy and use HTTPS. The current API key is shared by this Sentinel installation; it is not a multi-user login system.
+Restrict access with your firewall. For access beyond a trusted local network, place Sentinel behind a TLS reverse proxy and use HTTPS. Sentinel uses individual administrator, operator, and viewer accounts. HTTPS protects passwords and session cookies in transit.
 
 ## Everyday operations
 
@@ -72,6 +72,6 @@ The copied database must be owned by UID 10001 inside the container so Core can 
 
 ## Configuration
 
-The installer creates `.env`. `.env.example` documents the available settings. Keep `API_KEY` stable or update the dashboard's saved key. Keep `VAULT_KEY` stable for the lifetime of the credential store.
+The installer creates `.env`. `.env.example` documents the available settings. Account passwords are stored as bcrypt hashes. Browser sessions expire after 12 hours and use CSRF protection for changes. Keep `VAULT_KEY` stable for the lifetime of the credential store. An `API_KEY` entry left by an older installation is ignored by account authentication.
 
 The SQLite database lives in the `sentinel_data` named volume at `/data/sentinel.db`. This deployment target currently supports SQLite. Core health checks verify the API and database before the dashboard container starts.

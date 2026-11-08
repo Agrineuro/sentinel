@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -13,7 +14,7 @@ async def list_relationships(db: Session = Depends(get_db)):
     return relationship_registry.list(db)
 
 
-@router.post("", response_model=Relationship)
+@router.post("", response_model=Relationship, dependencies=[Depends(require_operator)])
 async def create_relationship(payload: RelationshipCreate, db: Session = Depends(get_db)):
     try:
         return relationship_registry.create(db, payload)
@@ -23,7 +24,7 @@ async def create_relationship(payload: RelationshipCreate, db: Session = Depends
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.delete("/{relationship_id}")
+@router.delete("/{relationship_id}", dependencies=[Depends(require_operator)])
 async def delete_relationship(relationship_id: str, db: Session = Depends(get_db)):
     if not relationship_registry.delete(db, relationship_id):
         raise HTTPException(status_code=404, detail="Relationship not found")

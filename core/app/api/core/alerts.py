@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.alert import AlertModel
@@ -31,7 +32,7 @@ async def list_alerts(
         query = query.filter(AlertModel.title.ilike(term) | AlertModel.summary.ilike(term) | AlertModel.entity.ilike(term))
     return query.order_by(AlertModel.triggered_at.desc()).offset(offset).limit(limit).all()
 
-@router.patch("/{alert_id}", response_model=Alert)
+@router.patch("/{alert_id}", response_model=Alert, dependencies=[Depends(require_operator)])
 async def update_alert(alert_id: str, payload: AlertStatusUpdate, db: Session = Depends(get_db)):
     if payload.status not in {"open", "acknowledged", "resolved"}:
         raise HTTPException(status_code=422, detail="Status must be open, acknowledged, or resolved")

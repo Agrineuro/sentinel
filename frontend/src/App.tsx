@@ -19,10 +19,12 @@ import {
   type SentinelSettings,
 } from './config'
 import { useObservationSocket } from './hooks/useObservationSocket'
+import { useAuth } from './auth/AuthProvider'
 import { useSentinelData } from './hooks/useSentinelData'
 import type { ObservationRecord, PageKey } from './types'
 
 export default function App() {
+  const { user, logout } = useAuth()
   const [page, setPage] = useState<PageKey>('overview')
   const [settings, setSettings] = useState<SentinelSettings>(() =>
     loadSettings(),
@@ -198,6 +200,8 @@ export default function App() {
             assetCount={data.assets.length}
             alertCount={alertCount}
             settings={settings}
+            user={user}
+            onLogout={() => void logout()}
             assets={data.assets}
             observations={data.observations}
             onNavigate={setPage}

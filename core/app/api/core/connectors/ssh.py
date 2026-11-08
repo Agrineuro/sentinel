@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 
 from app.connectors.ssh_connector import SSHConnector
@@ -12,7 +13,7 @@ from app.vault.service import vault_service
 router = APIRouter(prefix="/connectors/ssh", tags=["connectors"])
 
 
-@router.post("/discover", response_model=Asset)
+@router.post("/discover", response_model=Asset, dependencies=[Depends(require_operator)])
 async def discover_linux_host(
     payload: SSHDiscoveryRequest,
     db: Session = Depends(get_db),

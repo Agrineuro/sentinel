@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from app.api.auth import require_operator
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -8,7 +9,7 @@ from app.vault.service import vault_service
 router = APIRouter(prefix="/vault", tags=["vault"])
 
 
-@router.post("/credentials", response_model=CredentialMetadata)
+@router.post("/credentials", response_model=CredentialMetadata, dependencies=[Depends(require_operator)])
 async def create_credential(
     payload: CredentialCreate,
     db: Session = Depends(get_db),

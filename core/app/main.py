@@ -1,11 +1,10 @@
 import asyncio
 import logging
-import hmac
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import WebSocket, WebSocketDisconnect
-from app.api.auth import require_api_key
+from app.api.auth import router as auth_router, require_user
 from app.api.core.assets import router as assets_router
 from app.api.core.alerts import router as alerts_router
 from app.api.core.reports import router as reports_router
@@ -30,6 +29,7 @@ from app.models import observation  # noqa: F401
 from app.models import rule  # noqa: F401
 from app.models import alert  # noqa: F401
 from app.models import connector  # noqa: F401
+from app.models.user import UserModel, UserSessionModel  # noqa: F401
 from app.services.observation_hub import observation_hub
 from app.services.asset_monitor import refresh_assets
 
@@ -96,27 +96,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(health_router, prefix=settings.api_prefix)
+app.include_router(auth_router, prefix=settings.api_prefix)
 protected = [observations_router, rules_router, alerts_router, reports_router,
              legacy_events_router, assets_router, relationships_router, vault_router,
              ssh_connector_router, connectors_router]
 for router in protected:
-    app.include_router(router, prefix=settings.api_prefix, dependencies=[Depends(require_api_key)])
+    app.include_router(router, prefix=settings.api_prefix, dependencies=[Depends(require_user)])
 app.include_router(connector_ingest_router, prefix=settings.api_prefix)
 
 
 @app.websocket(f"{settings.api_prefix}/events/ws")
 async def observation_events(websocket: WebSocket):
-    protocols = [value.strip() for value in websocket.headers.get("sec-websocket-protocol", "").split(",")]
-    token = next((value[len("token."):] for value in protocols if value.startswith("token.")), None)
-    if settings.api_key and (
-        not token or not hmac.compare_digest(token, settings.api_key)
-    ):
+    from datetime import datetime
+    import hashlib
+    from app.models.user import UserModel, UserSessionModel
+
+    token = websocket.cookies.get("sentinel_session", "")
+    db = SessionLocal()
+    session = None
+    try:
+        if token:
+            digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            session = db.query(UserSessionModel).filter(
+                UserSessionModel.token_hash == digest,
+                UserSessionModel.expires_at > datetime.utcnow(),
+            ).first()
+        user = db.query(UserModel).filter(
+            UserModel.id == session.user_id if session else "",
+            UserModel.is_active.is_(True),
+        ).first() if session else None
+    finally:
+        db.close()
+    if user is None:
         await websocket.close(code=1008)
         return
-    if settings.environment.casefold() == "production" and not settings.api_key:
-        await websocket.close(code=1011)
-        return
-    await observation_hub.connect(websocket, 'sentinel' if 'sentinel' in protocols else None)
+    await observation_hub.connect(websocket, "sentinel")
     try:
         while True:
             await websocket.receive_text()

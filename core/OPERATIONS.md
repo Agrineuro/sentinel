@@ -27,7 +27,7 @@ The startup migration runner records applied schema versions and applies SQLite 
 
 ## API access control
 
-Set API_KEY to a long random value in core/.env. Set ENVIRONMENT=production to require an API key; production mode refuses API requests if no key is configured. Enter the same key in Settings → Backend connection → API key in each browser. The key stays out of the frontend build and is sent in an authorization header for REST and a WebSocket subprotocol for live events. The health endpoint remains public and reports whether authentication is required.
+Create the first administrator account from the dashboard on first visit. Additional accounts and roles are managed in Settings �w^~)�v Accounts and access. Browser sessions expire after 12 hours; password changes and account changes use CSRF protection. The API health endpoint is public for container health checks.
 
 The dashboard stores the key in that browser's local settings. Use HTTPS when exposing Sentinel beyond a trusted local network.
 
