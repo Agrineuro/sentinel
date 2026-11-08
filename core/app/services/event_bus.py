@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, UTC
 from typing import Any
 from uuid import uuid4
-
+from app.services.event_store import event_store
 
 @dataclass
 class SentinelEvent:

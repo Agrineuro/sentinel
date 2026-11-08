@@ -48,3 +48,9 @@ build/
 
 # Temporary files
 *.tmp
+
+# Node dependencies and TypeScript build metadata
+node_modules/
+*.tsbuildinfo
+/frontend/vite.config.js
+/frontend/vite.config.d.ts

@@ -30,6 +30,17 @@ Every milestone should:
 
 Working software is always preferred over unfinished ideas.
 
+## Usability for different experience levels
+
+Sentinel should be approachable for a first-time user and still give experienced operators meaningful control.
+
+* Use plain language and guided setup. Explain what each connection needs, where to find it, what Sentinel will do, and how to check whether it worked.
+* Start with safe, sensible defaults. Put protocol-specific and advanced tuning behind clearly labeled expandable controls.
+* Show useful context, status, and recovery steps in the interface instead of expecting users to decode raw errors.
+* Advanced users must be able to inspect and change the important connection, monitoring, alert, and automation settings without leaving Sentinel.
+
+A feature is not complete until a new user can follow its setup without outside documentation and an experienced user can reach its detailed controls.
+
 ---
 
 # Phase 0 — Foundation
