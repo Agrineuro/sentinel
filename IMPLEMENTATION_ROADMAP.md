@@ -109,6 +109,12 @@ Success Criteria:
 
 Sentinel discovers and inventories infrastructure automatically.
 
+### Connector coverage
+
+Current supported system checks include SSH, HTTP/HTTPS, ICMP ping, and TCP reachability. Current event sources include signed webhooks, MQTT subscriptions, REST/HTTP JSON polling, and WebSocket JSON streams.
+
+Next connector families to add include Syslog, SNMP, Modbus TCP, and native service adapters for Docker, Proxmox, Home Assistant, and TrueNAS. Implement connector directions explicitly so each type can receive, send, or do both where its protocol supports it.
+
 ### Shared message translation
 
 * Normalize incoming connector messages into Sentinel's canonical event fields.

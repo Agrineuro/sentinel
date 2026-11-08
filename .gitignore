@@ -54,3 +54,6 @@ node_modules/
 *.tsbuildinfo
 /frontend/vite.config.js
 /frontend/vite.config.d.ts
+*.db-journal
+*.db-wal
+*.db-shm

@@ -13,6 +13,8 @@ from app.api.core.rules import router as rules_router
 from app.api.core.connectors.ssh import router as ssh_connector_router
 from app.api.core.connector_registry import router as connectors_router, ingest_router as connector_ingest_router
 from app.connectors.mqtt_runtime import mqtt_runtime
+from app.connectors.http_poll_runtime import http_poll_runtime
+from app.connectors.websocket_runtime import websocket_runtime
 from app.api.core.health import router as health_router
 from app.api.core.observations import legacy_events_router, router as observations_router
 from app.api.core.relationships import router as relationships_router
@@ -62,12 +64,16 @@ async def _health_monitor_loop():
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     mqtt_runtime.start_enabled(asyncio.get_running_loop())
+    http_poll_runtime.start_enabled()
+    websocket_runtime.start_enabled()
     task = asyncio.create_task(_health_monitor_loop())
     try:
         yield
     finally:
         task.cancel()
         mqtt_runtime.stop_all()
+        await http_poll_runtime.stop_all()
+        await websocket_runtime.stop_all()
         await asyncio.gather(task, return_exceptions=True)
 
 

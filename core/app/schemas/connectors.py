@@ -1,6 +1,7 @@
 from datetime import datetime
 import re
 from typing import Any, Literal
+from urllib.parse import urlparse
 from pydantic import BaseModel, Field, model_validator
 
 FIELD_MAP_TARGETS = {"type", "severity", "summary", "timestamp", "entity", "entity_id", "value"}
@@ -20,7 +21,7 @@ def validate_field_map(field_map):
 
 class ConnectorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    connector_type: Literal["webhook", "mqtt"]
+    connector_type: Literal["webhook", "mqtt", "http_poll", "websocket"]
     enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
     username: str | None = Field(default=None, max_length=200)
@@ -47,6 +48,41 @@ class ConnectorCreate(BaseModel):
                 raise ValueError("MQTT QoS must be 0, 1, or 2")
             if bool(self.username) != bool(self.password):
                 raise ValueError("Provide both MQTT username and password")
+        if self.connector_type == "websocket":
+            url = str(self.config.get("url") or "").strip()
+            parsed = urlparse(url)
+            if parsed.scheme not in {"ws", "wss"} or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("WebSocket URL must be an absolute ws:// or wss:// URL without embedded credentials")
+            auth_type = str(self.config.get("auth_type", "none"))
+            if auth_type not in {"none", "bearer"}:
+                raise ValueError("WebSocket authentication must be none or bearer")
+            if auth_type == "bearer" and (self.username or not self.password):
+                raise ValueError("WebSocket bearer authentication requires a token and no username")
+            if auth_type == "none" and (self.username or self.password):
+                raise ValueError("Credentials were provided while WebSocket authentication is disabled")
+        if self.connector_type == "http_poll":
+            url = str(self.config.get("url") or "").strip()
+            parsed = urlparse(url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("HTTP connector URL must be an absolute HTTP or HTTPS URL without embedded credentials")
+            try:
+                interval = int(self.config.get("poll_interval_seconds", 60))
+                timeout = int(self.config.get("timeout_seconds", 10))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("HTTP polling interval and timeout must be numbers") from exc
+            if not 15 <= interval <= 3600:
+                raise ValueError("HTTP polling interval must be between 15 and 3600 seconds")
+            if not 1 <= timeout <= 30:
+                raise ValueError("HTTP timeout must be between 1 and 30 seconds")
+            auth_type = str(self.config.get("auth_type", "none"))
+            if auth_type not in {"none", "basic", "bearer"}:
+                raise ValueError("HTTP authentication must be none, basic, or bearer")
+            if auth_type == "basic" and (not self.username or not self.password):
+                raise ValueError("Basic authentication requires both a username and password")
+            if auth_type == "bearer" and (self.username or not self.password):
+                raise ValueError("Bearer authentication requires a token and no username")
+            if auth_type == "none" and (self.username or self.password):
+                raise ValueError("Credentials were provided while HTTP authentication is disabled")
         return self
 
 class ConnectorUpdate(BaseModel):

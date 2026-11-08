@@ -34,7 +34,7 @@ The dashboard stores the key in that browser's local settings. Use HTTPS when ex
 
 ## Inbound message translation
 
-Webhook and MQTT messages are translated into Sentinel's common event fields before storage and rule evaluation. Automatic detection recognizes common names such as `event_type`, `message`, `level`, `data`, and `device.name`. A connector can override any field with a dot-separated JSON object path under its translation settings.
+Webhook, MQTT, REST API polling, and WebSocket messages are translated into Sentinel's common event fields before storage and rule evaluation. Automatic detection recognizes common names such as `event_type`, `message`, `level`, `data`, and `device.name`. A connector can override any field with a dot-separated JSON object path under its translation settings. REST polling accepts JSON responses and suppresses repeat observations for unchanged event objects. WebSocket streams reconnect automatically after connection loss.
 
 Example field map:
 

@@ -163,7 +163,7 @@ export interface ConnectorCreateResult extends Connector {
 }
 export async function createConnector(settings: SentinelSettings, payload: {
   name: string
-  connector_type: 'webhook' | 'mqtt'
+  connector_type: 'webhook' | 'mqtt' | 'http_poll' | 'websocket'
   enabled: boolean
   config: Record<string, unknown>
   username?: string

@@ -25,10 +25,32 @@ class ConnectorService:
                                  password=payload.password, credential_type="mqtt_password"),
             )
             credential_id = credential.id
+        elif payload.connector_type in {"http_poll", "websocket"} and payload.config.get("auth_type") in {"basic", "bearer"}:
+            auth_type = str(payload.config["auth_type"])
+            credential = vault_service.create_credential(
+                db,
+                CredentialCreate(
+                    name=payload.name + " " + ("WebSocket" if payload.connector_type == "websocket" else "HTTP") + " credentials",
+                    username=payload.username or "token",
+                    password=payload.password or "",
+                    credential_type=("http_" if payload.connector_type == "http_poll" else "websocket_") + auth_type,
+                ),
+            )
+            credential_id = credential.id
         token = secrets.token_urlsafe(32) if payload.connector_type == "webhook" else None
         config = {}
         translation = payload.config.get("translation") or {}
         config = {"translation": {"field_map": dict(translation.get("field_map") or {})}} if translation.get("field_map") else {}
+        if payload.connector_type == "websocket":
+            config.update({"url": str(payload.config["url"]).strip(),
+                           "auth_type": str(payload.config.get("auth_type", "none"))})
+        if payload.connector_type == "http_poll":
+            config.update({
+                "url": str(payload.config["url"]).strip(),
+                "poll_interval_seconds": int(payload.config.get("poll_interval_seconds", 60)),
+                "timeout_seconds": int(payload.config.get("timeout_seconds", 10)),
+                "auth_type": str(payload.config.get("auth_type", "none")),
+            })
         if payload.connector_type == "mqtt":
             config.update({
                 "host": str(payload.config["host"]).strip(),
@@ -44,7 +66,7 @@ class ConnectorService:
             connector_type=payload.connector_type,
             direction="inbound",
             enabled=payload.enabled,
-            status=("starting" if payload.enabled and payload.connector_type == "mqtt"
+            status=("starting" if payload.enabled and payload.connector_type in {"mqtt", "http_poll", "websocket"}
                     else "ready" if payload.enabled else "disabled"),
             config=config,
             credential_id=credential_id,
@@ -81,7 +103,7 @@ class ConnectorService:
         return ConnectorRead(
             id=model.id, name=model.name, connector_type=model.connector_type,
             direction=model.direction, enabled=model.enabled, status=model.status,
-            config=model.config or {}, credential_id=model.credential_id,
+            config={key: value for key, value in (model.config or {}).items() if key != "_runtime"}, credential_id=model.credential_id,
             last_checked_at=model.last_checked_at, last_error=model.last_error,
             created_at=model.created_at, updated_at=model.updated_at,
             ingest_path=("/connectors/ingest/" + model.id) if model.connector_type == "webhook" else None,

@@ -5,7 +5,7 @@ import { AddSystemForm } from './AddSystemForm'
 import type { SentinelSettings } from '../config'
 import { createConnector, deleteConnector, testConnector, updateConnector } from '../api/client'
 
-type ConnectorKind = 'webhook' | 'mqtt'
+type ConnectorKind = 'webhook' | 'mqtt' | 'http_poll' | 'websocket'
 
 export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavigate }: {
   connectors: Connector[]
@@ -15,6 +15,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
   onNavigate: (page: 'entities') => void
 }) {
   const [kind, setKind] = useState<ConnectorKind>('webhook')
+  const [httpAuth, setHttpAuth] = useState<'none' | 'basic' | 'bearer'>('none')
   const [busy, setBusy] = useState(false)
   const [workingId, setWorkingId] = useState('')
   const [error, setError] = useState('')
@@ -44,6 +45,16 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
           tls: form.get('tls') === 'on',
           ...(String(form.get('client_id') || '').trim() ? { client_id: String(form.get('client_id')).trim() } : {}),
         } : {}),
+        ...(kind === 'http_poll' ? {
+          url: String(form.get('url') || '').trim(),
+          poll_interval_seconds: Number(form.get('poll_interval_seconds') || 60),
+          timeout_seconds: Number(form.get('timeout_seconds') || 10),
+          auth_type: httpAuth,
+        } : {}),
+        ...(kind === 'websocket' ? {
+          url: String(form.get('url') || '').trim(),
+          auth_type: httpAuth === 'bearer' ? 'bearer' : 'none',
+        } : {}),
         ...translation,
       }
       const result = await createConnector(settings, {
@@ -52,9 +63,25 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
           username: String(form.get('username')).trim(),
           password: String(form.get('password') || ''),
         } : {}),
+        ...(kind === 'http_poll' && httpAuth === 'basic' ? {
+          username: String(form.get('username') || '').trim(),
+          password: String(form.get('password') || ''),
+        } : {}),
+        ...(kind === 'http_poll' && httpAuth === 'bearer' ? {
+          password: String(form.get('password') || ''),
+        } : {}),
+        ...(kind === 'websocket' && httpAuth === 'bearer' ? {
+          password: String(form.get('password') || ''),
+        } : {}),
       })
       if (result.webhook_token) setWebhookToken(result.webhook_token)
-      setNotice(kind === 'webhook' ? 'Webhook receiver created. Copy its secret now; Sentinel will not show it again.' : 'MQTT connector created. Sentinel is attempting to subscribe.')
+      setNotice(kind === 'webhook'
+        ? 'Webhook receiver created. Copy its secret now; Sentinel will not show it again.'
+        : kind === 'mqtt'
+          ? 'MQTT connector created. Sentinel is attempting to subscribe.'
+          : kind === 'http_poll'
+            ? 'REST API connector created. Sentinel will poll for JSON events.'
+            : 'WebSocket connector created. Sentinel is connecting to the event stream.')
       formElement.reset()
       await onRefresh()
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not create connector') }
@@ -71,8 +98,8 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
   const webhookUrl = (path: string) => settings.apiBaseUrl.replace(/\/$/, '') + path
 
   return <section className="functional-page connectors-page">
-    <div className="page-title"><div><span>Inbound integrations</span><h1>Connectors</h1><p>Receive events from other systems with signed webhooks or an MQTT topic subscription.</p></div><button className="secondary-button" onClick={()=>void onRefresh()}><RefreshCw size={15}/> Refresh</button></div>
-    <div className="connector-explainer panel"><Cable size={19}/><span>Sentinel has system monitoring connections (SSH, HTTP/HTTPS, ping) and event integrations (webhooks, MQTT). Monitoring connections attach to systems; event integrations receive data directly.</span></div>
+    <div className="page-title"><div><span>Inbound integrations</span><h1>Connectors</h1><p>Bring data into Sentinel from common event and API transports. Configure a source now and add more as your systems grow.</p></div><button className="secondary-button" onClick={()=>void onRefresh()}><RefreshCw size={15}/> Refresh</button></div>
+    <div className="connector-explainer panel"><Cable size={19}/><span>Sentinel has system monitoring connections (SSH, HTTP/HTTPS, ping) and event integrations (webhooks, MQTT, REST API polling, and WebSocket streams). Monitoring connections attach to systems; event integrations receive data directly.</span></div>
     <AddSystemForm settings={settings} onAdded={onRefresh} />
     <section className="connector-section">
       <div className="connector-section-heading"><div><span>System monitoring</span><h2>SSH, HTTP/HTTPS, ping, and TCP checks</h2></div><span>{assets.length} systems</span></div>
@@ -91,12 +118,16 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
       </div>
     </section>
     <section className="connector-section">
-      <div className="connector-section-heading"><div><span>Inbound event integrations</span><h2>Webhook and MQTT</h2></div><span>{connectors.length} integrations</span></div>
+      <div className="connector-section-heading"><div><span>Inbound event integrations</span><h2>Webhook, MQTT, REST API, and WebSocket</h2></div><span>{connectors.length} integrations</span></div>
     <form className="panel connector-form" onSubmit={create}>
       <h2>Add an inbound connector</h2>
       <p className="connector-form-intro">{kind === 'webhook'
         ? 'A webhook lets another app send events to Sentinel over HTTP. Create it, then copy the one-time secret into that app’s webhook settings.'
-        : 'MQTT lets Sentinel subscribe to messages from your broker. Start with the broker host and topic; the usual port and QoS defaults are already set.'}</p>
+        : kind === 'mqtt'
+          ? 'MQTT lets Sentinel subscribe to messages from your broker. Start with the broker host and topic; the usual port and QoS defaults are already set.'
+          : kind === 'http_poll'
+            ? 'Sentinel can poll a REST API for JSON events on a schedule. Authentication secrets are stored in the vault.'
+            : 'A WebSocket stream sends live JSON messages to Sentinel over a persistent connection. Sentinel reconnects automatically if the stream drops.'}</p>
       {kind === 'webhook' && <div className="connector-payload-guide">
         <strong>What Sentinel expects</strong>
         <span>Send a JSON object. These fields are optional; Sentinel fills in sensible defaults.</span>
@@ -110,7 +141,27 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
         <small>Allowed severity values: info, warning, error, critical. Authenticate with the X-Sentinel-Webhook-Token header.</small>
       </div>}
       <label><span>Connector name</span><input name="name" required maxLength={120} placeholder="Home Assistant events"/></label>
-      <label><span>Type</span><select value={kind} onChange={e=>setKind(e.target.value as ConnectorKind)}><option value="webhook">Webhook receiver</option><option value="mqtt">MQTT subscription</option></select></label>
+      <label><span>Type</span><select value={kind} onChange={e=>{setKind(e.target.value as ConnectorKind);setHttpAuth('none')}}><option value="webhook">Webhook receiver (push)</option><option value="mqtt">MQTT subscription (stream)</option><option value="http_poll">REST / HTTP API poller</option><option value="websocket">WebSocket event stream</option></select></label>
+      {kind === 'http_poll' && <>
+        <label><span>API URL</span><input name="url" type="url" required placeholder="https://service.example/api/events"/><small>Sentinel will request this endpoint from the Core server.</small></label>
+        <label><span>Authentication</span><select name="auth_type" value={httpAuth} onChange={e=>setHttpAuth(e.target.value as typeof httpAuth)}><option value="none">None</option><option value="bearer">Bearer token</option><option value="basic">Username and password</option></select></label>
+        {httpAuth === 'basic' && <>
+          <label><span>Username</span><input name="username" autoComplete="username" required/></label>
+          <label><span>Password</span><input name="password" type="password" autoComplete="new-password" required/></label>
+        </>}
+        {httpAuth === 'bearer' && <label><span>Bearer token</span><input name="password" type="password" autoComplete="new-password" required/><small>Stored encrypted in Sentinel’s vault.</small></label>}
+        <details className="connector-advanced"><summary>Advanced polling options</summary>
+          <div className="connector-advanced-grid">
+            <label><span>Poll interval (seconds)</span><input name="poll_interval_seconds" type="number" min="15" max="3600" defaultValue="60" required/><small>15 seconds to 1 hour.</small></label>
+            <label><span>Request timeout (seconds)</span><input name="timeout_seconds" type="number" min="1" max="30" defaultValue="10" required/></label>
+          </div>
+        </details>
+      </>}
+      {kind === 'websocket' && <>
+        <label><span>WebSocket URL</span><input name="url" type="url" required placeholder="wss://service.example/events"/><small>Use wss:// for encrypted connections. The Sentinel server must be able to reach this URL.</small></label>
+        <label><span>Authentication</span><select value={httpAuth} onChange={e=>setHttpAuth(e.target.value as typeof httpAuth)}><option value="none">None</option><option value="bearer">Bearer token</option></select></label>
+        {httpAuth === 'bearer' && <label><span>Bearer token</span><input name="password" type="password" autoComplete="new-password" required/><small>Stored encrypted in Sentinel’s vault.</small></label>}
+      </>}
       {kind === 'mqtt' && <>
         <label><span>Broker host</span><input name="host" required placeholder="mqtt.example.lan"/><small>Hostname or IP address that the Sentinel server can reach.</small></label>
         <label><span>Topic filter</span><input name="topic" required placeholder="sensors/+/state"/><small>Use + or # only if the broker should send multiple topics.</small></label>
@@ -151,10 +202,14 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
         const currentFieldMap = ((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map) || {}
         const translationTargets = ['type', 'severity', 'summary', 'timestamp', 'entity', 'entity_id', 'value']
         return <article className="panel connector-card" key={id}>
-          <div className="connector-card-heading"><span className={'connector-dot ' + connector.status}/><div><h2>{connector.name}</h2><small>{webhook?'Webhook receiver':'MQTT subscription'} · {connector.direction || 'inbound'}</small></div><span className={'health-chip ' + connector.status}>{connector.state || connector.status}</span></div>
+          <div className="connector-card-heading"><span className={'connector-dot ' + connector.status}/><div><h2>{connector.name}</h2><small>{webhook ? 'Webhook receiver' : connector.connector_type === 'mqtt' ? 'MQTT subscription' : connector.connector_type === 'http_poll' ? 'REST / HTTP API poller' : 'WebSocket event stream'} · {connector.direction || 'inbound'}</small></div><span className={'health-chip ' + connector.status}>{connector.state || connector.status}</span></div>
           <dl><dt>State</dt><dd>{connector.enabled ? (connector.state || 'enabled') : 'paused'}</dd>
             {webhook ? <><dt>Ingest URL</dt><dd><code>{endpoint}</code></dd><dt>Secret</dt><dd>Stored as a hash; visible only when created</dd></> :
-              <><dt>Broker</dt><dd>{String(connector.config?.host || 'Unknown')}:{String(connector.config?.port || 1883)}</dd><dt>Topic</dt><dd><code>{String(connector.config?.topic || 'Not set')}</code></dd><dt>Last check</dt><dd>{connector.last_checked_at ? new Date(connector.last_checked_at).toLocaleString() : 'Not checked'}</dd></>}
+              connector.connector_type === 'mqtt'
+                ? <><dt>Broker</dt><dd>{String(connector.config?.host || 'Unknown')}:{String(connector.config?.port || 1883)}</dd><dt>Topic</dt><dd><code>{String(connector.config?.topic || 'Not set')}</code></dd><dt>Last check</dt><dd>{connector.last_checked_at ? new Date(connector.last_checked_at).toLocaleString() : 'Not checked'}</dd></>
+                : connector.connector_type === 'http_poll'
+                  ? <><dt>API URL</dt><dd><code>{String(connector.config?.url || 'Not set')}</code></dd><dt>Poll interval</dt><dd>Every {String(connector.config?.poll_interval_seconds || 60)} seconds</dd><dt>Authentication</dt><dd>{String(connector.config?.auth_type || 'none')}</dd><dt>Last check</dt><dd>{connector.last_checked_at ? new Date(connector.last_checked_at).toLocaleString() : 'Not checked'}</dd></>
+                  : <><dt>Stream URL</dt><dd><code>{String(connector.config?.url || 'Not set')}</code></dd><dt>Authentication</dt><dd>{String(connector.config?.auth_type || 'none')}</dd><dt>Last check</dt><dd>{connector.last_checked_at ? new Date(connector.last_checked_at).toLocaleString() : 'Not checked'}</dd></>}
             <dt>Translation</dt><dd>{Object.keys((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map || {}).length
               ? Object.keys((connector.config?.translation as { field_map?: Record<string, string> } | undefined)?.field_map || {}).length + ' custom field paths'
               : 'Automatic common-field detection'}</dd>
@@ -181,7 +236,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
             <button className="secondary-button danger-button" disabled={workingId===id} onClick={()=>{if(window.confirm('Remove connector “'+connector.name+'”?'))void runAction(id,()=>deleteConnector(settings,id))}}><Trash2 size={14}/> Remove</button>
           </div>
         </article>
-      }) : <div className="panel large-panel-empty"><strong>No event integrations configured</strong><span>Create a webhook for HTTP event delivery or an MQTT subscription for a broker topic.</span></div>}
+      }) : <div className="panel large-panel-empty"><strong>No event integrations configured</strong><span>Create a webhook receiver, subscribe to MQTT or WebSocket streams, or poll a REST API for JSON events.</span></div>}
     </div>
     </section>
   </section>

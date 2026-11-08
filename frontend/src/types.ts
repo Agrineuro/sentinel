@@ -10,7 +10,7 @@ export interface Connector {
   status: HealthState
   rate: string
   lastSeen: string
-  connector_type?: 'webhook' | 'mqtt' | string
+  connector_type?: 'webhook' | 'mqtt' | 'http_poll' | 'websocket' | string
   direction?: string
   enabled?: boolean
   state?: string
