@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/Agrineuro/sentinel/tree/master/plugins",
+  "plugins": [
+    {
+      "id": "sentinel.connector.template",
+      "name": "Connector Plugin Starter",
+      "category": "Developer tools",
+      "status": "template",
+      "description": "A documented starting point for building optional Sentinel connector plugins.",
+      "capabilities": [
+        "connector manifest",
+        "SDK contract draft"
+      ],
+      "source_path": "templates/connector"
+    },
+    {
+      "id": "sentinel.connector.snmp",
+      "name": "SNMP Monitoring",
+      "category": "Monitoring",
+      "status": "planned",
+      "description": "Optional network-device monitoring for switches, routers, UPS units, and other SNMP-enabled equipment.",
+      "capabilities": [
+        "read-only monitoring",
+        "device inventory"
+      ],
+      "source_path": null
+    },
+    {
+      "id": "sentinel.connector.syslog",
+      "name": "Syslog Receiver",
+      "category": "Events and logs",
+      "status": "planned",
+      "description": "Receive and normalize log messages from servers, network equipment, and applications.",
+      "capabilities": [
+        "event ingestion"
+      ],
+      "source_path": null
+    },
+    {
+      "id": "sentinel.connector.prometheus",
+      "name": "Prometheus Metrics",
+      "category": "Metrics",
+      "status": "planned",
+      "description": "Collect metrics from Prometheus-compatible endpoints without adding those libraries to Sentinel Core.",
+      "capabilities": [
+        "metrics collection"
+      ],
+      "source_path": null
+    },
+    {
+      "id": "sentinel.connector.docker",
+      "name": "Docker and Containers",
+      "category": "Infrastructure",
+      "status": "planned",
+      "description": "Monitor container hosts, containers, and runtime health through an optional platform connector.",
+      "capabilities": [
+        "read-only monitoring",
+        "asset discovery"
+      ],
+      "source_path": null
+    }
+  ]
+}

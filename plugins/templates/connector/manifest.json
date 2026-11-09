@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "sentinel.connector.example",
+  "name": "Example Connector",
+  "version": "0.1.0",
+  "minimum_core_version": "0.1.0",
+  "entrypoint": "plugin:ConnectorPlugin",
+  "capabilities": {
+    "monitor": false,
+    "receive_events": false,
+    "send_messages": false,
+    "perform_actions": false
+  },
+  "permissions": [],
+  "dependencies": []
+}

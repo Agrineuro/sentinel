@@ -1,4 +1,4 @@
-import { Activity, Bell, Boxes, Cable, Gauge, Network, ScrollText, Settings, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { Activity, Bell, Boxes, Cable, Gauge, Network, ScrollText, Settings, ShieldCheck, SlidersHorizontal, Puzzle } from 'lucide-react'
 import type { PageKey, SystemHealth } from '../types'
 
 const nav = [
@@ -10,6 +10,7 @@ const nav = [
   { key: 'rules', label: 'Rules', icon: SlidersHorizontal },
   { key: 'alerts', label: 'Alerts', icon: Bell },
   { key: 'reports', label: 'Reports', icon: ScrollText },
+  { key: 'plugins', label: 'Plugins', icon: Puzzle },
   { key: 'settings', label: 'Settings', icon: Settings },
 ] as const
 

@@ -5,6 +5,7 @@ import { ConnectorsPage } from './components/ConnectorsPage'
 import { RulesPage } from './components/RulesPage'
 import { AlertsPage } from './components/AlertsPage'
 import { ReportsPage } from './components/ReportsPage'
+import { PluginsPage } from './components/PluginsPage'
 import { createRelationship, deleteRelationship, createRule, updateRule, deleteRule, updateAlert } from './api/client'
 import { MetricCards } from './components/MetricCards'
 import { ObservationsPage } from './components/ObservationsPage'
@@ -121,6 +122,10 @@ export default function App() {
 
     if (page === 'reports') {
       return <ReportsPage report={data.report} />
+    }
+
+    if (page === 'plugins') {
+      return <PluginsPage />
     }
 
     if (page === 'graph') {
