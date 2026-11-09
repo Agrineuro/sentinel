@@ -7,7 +7,7 @@ import { AlertDetailsDialog } from './AlertDetailsDialog'
 
 const PAGE_SIZE = 50
 
-export function AlertsPage({ alerts, settings, onStatus }: { alerts: AlertRecord[]; settings: SentinelSettings; onStatus: (alert: AlertRecord, status: AlertRecord['status']) => Promise<void> }) {
+export function AlertsPage({ alerts, settings, onStatus, canOperate }: { alerts: AlertRecord[]; settings: SentinelSettings; onStatus: (alert: AlertRecord, status: AlertRecord['status']) => Promise<void>; canOperate: boolean }) {
   const [filter, setFilter] = useState('active')
   const [severity, setSeverity] = useState('all')
   const [query, setQuery] = useState('')
@@ -52,7 +52,7 @@ export function AlertsPage({ alerts, settings, onStatus }: { alerts: AlertRecord
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="alert-list">{loading ? <div className="panel large-panel-empty"><strong>Loading alerts…</strong></div> : rows.length ? rows.map(alert=><article className="panel alert-card" key={alert.id}>
       <span className={'severity-mark ' + alert.severity}/><div className="alert-copy"><div className="alert-title-row"><button className="alert-detail-trigger" onClick={() => setSelectedAlert(alert)}>{alert.title}</button><span className={'alert-status ' + alert.status}>{alert.status}</span></div><p>{alert.summary}</p><small>{alert.entity ?? 'System'} · {alert.occurrence_count} occurrence{alert.occurrence_count===1?'':'s'} · First seen {new Date(alert.triggered_at).toLocaleString()} · Last seen {new Date(alert.last_seen_at).toLocaleString()} · Rule {alert.rule_id ?? 'removed'} · Observation {alert.source_observation_id}</small></div>
-      <div className="alert-actions">{alert.status==='open' && <button className="secondary-button" onClick={()=>void onStatus(alert,'acknowledged')}><Check size={15}/>Acknowledge</button>}{alert.status!=='resolved' ? <button className="primary-button" onClick={()=>void onStatus(alert,'resolved')}><CircleCheck size={15}/>Resolve</button> : <button className="secondary-button" onClick={()=>void onStatus(alert,'open')}><RotateCcw size={15}/>Reopen</button>}</div>
+      {canOperate && <div className="alert-actions">{alert.status==='open' && <button className="secondary-button" onClick={()=>void onStatus(alert,'acknowledged')}><Check size={15}/>Acknowledge</button>}{alert.status!=='resolved' ? <button className="primary-button" onClick={()=>void onStatus(alert,'resolved')}><CircleCheck size={15}/>Resolve</button> : <button className="secondary-button" onClick={()=>void onStatus(alert,'open')}><RotateCcw size={15}/>Reopen</button>}</div>}
     </article>) : <div className="panel large-panel-empty"><strong>No {filter==='active'?'active ':''}alerts match</strong><span>When an observation matches an enabled rule, Sentinel will open an alert here.</span></div>}</div>
     <div className="page-controls"><button className="secondary-button" disabled={page===0 || loading} onClick={()=>setPage(value=>Math.max(0,value-1))}><ChevronLeft size={15}/>Previous</button><span>Page {page+1}</span><button className="secondary-button" disabled={rows.length<PAGE_SIZE || loading} onClick={()=>setPage(value=>value+1)}>Next<ChevronRight size={15}/></button></div>
     {selectedAlert && <AlertDetailsDialog alert={selectedAlert} onClose={() => setSelectedAlert(null)} onOpenAlerts={() => setSelectedAlert(null)} openAlertsLabel="Back to Alerts" />}

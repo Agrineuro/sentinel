@@ -25,6 +25,7 @@ import type { ObservationRecord, PageKey } from './types'
 
 export default function App() {
   const { user, logout } = useAuth()
+  const canOperate = user.role === 'admin' || user.role === 'operator'
   const [page, setPage] = useState<PageKey>('overview')
   const [settings, setSettings] = useState<SentinelSettings>(() =>
     loadSettings(),
@@ -95,11 +96,11 @@ export default function App() {
 
   const content = useMemo(() => {
     if (page === 'entities') {
-      return <EntitiesPage assets={data.assets} settings={settings} onAdded={refreshData} />
+      return <EntitiesPage assets={data.assets} settings={settings} onAdded={refreshData} canOperate={canOperate} />
     }
 
     if (page === 'connectors') {
-      return <ConnectorsPage connectors={data.connectors} assets={data.assets} settings={settings} onRefresh={refreshData} onNavigate={setPage} />
+      return <ConnectorsPage connectors={data.connectors} assets={data.assets} settings={settings} onRefresh={refreshData} onNavigate={setPage} canOperate={canOperate} />
     }
 
     if (page === 'settings') {
@@ -111,11 +112,11 @@ export default function App() {
     }
 
     if (page === 'rules') {
-      return <RulesPage rules={data.rules} settings={settings} onCreate={addRule} onToggle={toggleRule} onDelete={removeRule} />
+      return <RulesPage rules={data.rules} settings={settings} onCreate={addRule} onToggle={toggleRule} onDelete={removeRule} canOperate={canOperate} />
     }
 
     if (page === 'alerts') {
-      return <AlertsPage alerts={data.alerts} settings={settings} onStatus={changeAlertStatus} />
+      return <AlertsPage alerts={data.alerts} settings={settings} onStatus={changeAlertStatus} canOperate={canOperate} />
     }
 
     if (page === 'reports') {
@@ -125,7 +126,7 @@ export default function App() {
     if (page === 'graph') {
       return (
         <section className="standalone-graph">
-          <SystemGraph assets={data.assets} health={data.health} relationships={data.relationships} graphAnimation={settings.graphAnimation} onCreateRelationship={addRelationship} onDeleteRelationship={removeRelationship} />
+          <SystemGraph assets={data.assets} health={data.health} relationships={data.relationships} graphAnimation={settings.graphAnimation} onCreateRelationship={addRelationship} onDeleteRelationship={removeRelationship} canEdit={canOperate} />
         </section>
       )
     }
@@ -146,7 +147,7 @@ export default function App() {
         />
 
         <div className="main-grid">
-          <SystemGraph assets={data.assets} health={data.health} relationships={data.relationships} graphAnimation={settings.graphAnimation} onCreateRelationship={addRelationship} onDeleteRelationship={removeRelationship} />
+          <SystemGraph assets={data.assets} health={data.health} relationships={data.relationships} graphAnimation={settings.graphAnimation} onCreateRelationship={addRelationship} onDeleteRelationship={removeRelationship} canEdit={canOperate} />
 
           <RightRail
             observations={data.observations}
@@ -166,6 +167,7 @@ export default function App() {
   }, [
     page,
     settings,
+    canOperate,
     data.assets,
     data.connectors,
     data.health,

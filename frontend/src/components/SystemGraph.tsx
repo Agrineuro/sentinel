@@ -24,6 +24,7 @@ export function SystemGraph({
   onCreateRelationship,
   onDeleteRelationship,
   graphAnimation,
+  canEdit,
 }: {
   assets: Asset[]
   health: SystemHealth
@@ -31,6 +32,7 @@ export function SystemGraph({
   onCreateRelationship: (relationship: Omit<Relationship, 'id' | 'metadata'>) => Promise<void>
   onDeleteRelationship: (id: string) => Promise<void>
   graphAnimation: boolean
+  canEdit: boolean
 }) {
   const [showBuilder, setShowBuilder] = useState(false)
   const [graphKey, setGraphKey] = useState(0)
@@ -170,16 +172,16 @@ export function SystemGraph({
         </div>
 
         <div className="panel-actions">
-          <button onClick={() => setShowBuilder((value) => !value)}>
+          {canEdit && <button onClick={() => setShowBuilder((value) => !value)}>
             <Link2 size={15} /> {showBuilder ? 'Close' : 'Add connection'}
-          </button>
+          </button>}
           <button className="square-button" onClick={resetLayout} aria-label="Reset graph layout" title="Reset graph layout">
             Reset layout
           </button>
         </div>
       </div>
 
-      {showBuilder && (
+      {canEdit && showBuilder && (
         <form className="graph-relationship-form" onSubmit={submit}>
           <label>
             <span>From</span>
@@ -213,7 +215,7 @@ export function SystemGraph({
             const to = assets.find(asset => asset.id === relationship.target_asset_id)?.display_name ?? relationship.target_asset_id
             return <div className="relationship-row" key={relationship.id}>
               <span><strong>{from}</strong> {relationship.relationship_type} <strong>{to}</strong></span>
-              <button className="icon-button" onClick={() => void removeRelationship(relationship.id)} aria-label={'Remove relationship ' + relationship.relationship_type}><Trash2 size={15}/></button>
+              {canEdit && <button className="icon-button" onClick={() => void removeRelationship(relationship.id)} aria-label={'Remove relationship ' + relationship.relationship_type}><Trash2 size={15}/></button>}
             </div>
           })}
         </div>

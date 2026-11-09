@@ -5,12 +5,13 @@ import type { SentinelSettings } from '../config'
 import { previewRule, type RulePreview } from '../api/client'
 
 type NewRule = Omit<RuleRecord, 'id' | 'created_at' | 'updated_at'>
-export function RulesPage({ rules, settings, onCreate, onToggle, onDelete }: {
+export function RulesPage({ rules, settings, onCreate, onToggle, onDelete, canOperate }: {
   rules: RuleRecord[]
   settings: SentinelSettings
   onCreate: (rule: NewRule) => Promise<void>
   onToggle: (rule: RuleRecord) => Promise<void>
   onDelete: (rule: RuleRecord) => Promise<void>
+  canOperate: boolean
 }) {
   const [name, setName] = useState('')
   const [type, setType] = useState('health')
@@ -59,7 +60,7 @@ export function RulesPage({ rules, settings, onCreate, onToggle, onDelete }: {
 
   return <section className="functional-page">
     <div className="page-title"><div><span>Deterministic evaluation</span><h1>Rules</h1><p>Match observations by type, severity, text, or numeric values to create alerts.</p></div></div>
-    <form className="panel rule-form" onSubmit={submit}>
+    {canOperate && <form className="panel rule-form" onSubmit={submit}>
       <h2>Create a rule</h2>
       <label><span>Name</span><input required value={name} onChange={e=>setName(e.target.value)} placeholder="High host resource use"/></label>
       <label><span>Observation type</span><input value={type} onChange={e=>setType(e.target.value)} placeholder="health or *"/></label>
@@ -80,12 +81,13 @@ export function RulesPage({ rules, settings, onCreate, onToggle, onDelete }: {
         <strong>{preview.match_count} matching observations</strong><span>Scanned {preview.scanned} recent observations. Preview does not create alerts.</span>
         {preview.matches.slice(0,5).map(row=><small key={row.id}>{row.entity || 'No system'} · {row.severity} · {row.summary}</small>)}
       </div>}
-    </form>
+    </form>}
+    {!canOperate && <p className="role-readonly-note">Viewer access - rules can be viewed but not changed.</p>}
     <div className="rule-list">
       {rules.length ? rules.map(rule=><article className="panel rule-card" key={rule.id}>
         <div><span className={'health-chip ' + (rule.enabled?'healthy':'unknown')}>{rule.enabled?'Enabled':'Paused'}</span><h2>{rule.name}</h2><p>{rule.observation_type} observations · {rule.minimum_severity}+ severity{rule.entity_contains ? ' · entity contains “' + rule.entity_contains + '”' : ''}{rule.summary_contains ? ' · summary contains “' + rule.summary_contains + '”' : ''}{rule.condition_field ? ' · ' + rule.condition_field + ' ' + (rule.condition_operator || '') + ' ' + rule.condition_value : ''}</p></div>
-        <button className="secondary-button" onClick={()=>void onToggle(rule)} aria-label={rule.enabled?'Pause rule':'Enable rule'}>{rule.enabled?<ToggleRight size={17}/>:<ToggleLeft size={17}/>} {rule.enabled?'Pause':'Enable'}</button>
-        <button className="icon-button" onClick={()=>void onDelete(rule)} aria-label={'Delete ' + rule.name}><Trash2 size={16}/></button>
+        {canOperate && <><button className="secondary-button" onClick={()=>void onToggle(rule)} aria-label={rule.enabled?'Pause rule':'Enable rule'}>{rule.enabled?<ToggleRight size={17}/>:<ToggleLeft size={17}/>} {rule.enabled?'Pause':'Enable'}</button>
+        <button className="icon-button" onClick={()=>void onDelete(rule)} aria-label={'Delete ' + rule.name}><Trash2 size={16}/></button></>}
       </article>) : <div className="panel large-panel-empty"><strong>No rules yet</strong><span>Create a rule to turn observations into alerts.</span></div>}
     </div>
   </section>

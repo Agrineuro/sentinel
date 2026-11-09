@@ -207,3 +207,4 @@
 .account-create-form>small{grid-column:1/-1}
 .account-readonly{color:var(--muted);font-size:12px}
 @media(max-width:900px){.account-create-form,.password-change-form{grid-template-columns:repeat(2,minmax(0,1fr))}.account-row{grid-template-columns:minmax(130px,1fr) 120px auto}.account-disabled{grid-column:1/-1}}
+.role-readonly-note{margin:0;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:rgba(12,28,45,.55);color:var(--muted);font-size:11px}

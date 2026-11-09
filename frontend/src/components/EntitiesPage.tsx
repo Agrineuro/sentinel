@@ -15,7 +15,7 @@ function assetIcon(assetType: string) {
   return Box
 }
 
-export function EntitiesPage({ assets, settings, onAdded }: { assets: Asset[]; settings: SentinelSettings; onAdded: () => Promise<void> }) {
+export function EntitiesPage({ assets, settings, onAdded, canOperate }: { assets: Asset[]; settings: SentinelSettings; onAdded: () => Promise<void>; canOperate: boolean }) {
   return (
     <section className="entities-page">
       <div className="page-title">
@@ -28,7 +28,7 @@ export function EntitiesPage({ assets, settings, onAdded }: { assets: Asset[]; s
         </div>
       </div>
 
-      <AddSystemForm settings={settings} onAdded={onAdded} />
+      {canOperate ? <AddSystemForm settings={settings} onAdded={onAdded} /> : <p className="role-readonly-note">Viewer access - systems can be viewed but not changed.</p>}
 
       <section className="entity-grid">
         {assets.length === 0 ? (
@@ -61,7 +61,7 @@ export function EntitiesPage({ assets, settings, onAdded }: { assets: Asset[]; s
                   </span>
                 </div>
 
-                <div className="entity-actions">
+                {canOperate && <div className="entity-actions">
                 <details className="entity-edit">
                   <summary className="secondary-button"><Pencil size={14} /> Edit system</summary>
                   <form className="entity-edit-form" onSubmit={async (event) => {
@@ -93,7 +93,7 @@ export function EntitiesPage({ assets, settings, onAdded }: { assets: Asset[]; s
                   try { await deleteAsset(settings, asset.id); await onAdded() }
                   catch (err) { window.alert(err instanceof Error ? err.message : 'Could not remove system') }
                 }}><Trash2 size={14} /> Remove</button>
-              </div>
+              </div>}
               <dl>
                   <dt>State</dt>
                   <dd>{asset.state}</dd>

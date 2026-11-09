@@ -7,12 +7,13 @@ import { createConnector, deleteConnector, testConnector, updateConnector } from
 
 type ConnectorKind = 'webhook' | 'mqtt' | 'http_poll' | 'websocket'
 
-export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavigate }: {
+export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavigate, canOperate }: {
   connectors: Connector[]
   assets: Asset[]
   settings: SentinelSettings
   onRefresh: () => Promise<void>
   onNavigate: (page: 'entities') => void
+  canOperate: boolean
 }) {
   const [kind, setKind] = useState<ConnectorKind>('webhook')
   const [httpAuth, setHttpAuth] = useState<'none' | 'basic' | 'bearer'>('none')
@@ -100,7 +101,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
   return <section className="functional-page connectors-page">
     <div className="page-title"><div><span>Inbound integrations</span><h1>Connectors</h1><p>Bring data into Sentinel from common event and API transports. Configure a source now and add more as your systems grow.</p></div><button className="secondary-button" onClick={()=>void onRefresh()}><RefreshCw size={15}/> Refresh</button></div>
     <div className="connector-explainer panel"><Cable size={19}/><span>Sentinel has system monitoring connections (SSH, HTTP/HTTPS, ping) and event integrations (webhooks, MQTT, REST API polling, and WebSocket streams). Monitoring connections attach to systems; event integrations receive data directly.</span></div>
-    <AddSystemForm settings={settings} onAdded={onRefresh} />
+    {canOperate ? <AddSystemForm settings={settings} onAdded={onRefresh} /> : <p className="role-readonly-note">Viewer access - connection settings are read only.</p>}
     <section className="connector-section">
       <div className="connector-section-heading"><div><span>System monitoring</span><h2>SSH, HTTP/HTTPS, ping, and TCP checks</h2></div><span>{assets.length} systems</span></div>
       <div className="connector-cards">
@@ -119,7 +120,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
     </section>
     <section className="connector-section">
       <div className="connector-section-heading"><div><span>Inbound event integrations</span><h2>Webhook, MQTT, REST API, and WebSocket</h2></div><span>{connectors.length} integrations</span></div>
-    <form className="panel connector-form" onSubmit={create}>
+    {canOperate && <form className="panel connector-form" onSubmit={create}>
       <h2>Add an inbound connector</h2>
       <p className="connector-form-intro">{kind === 'webhook'
         ? 'A webhook lets another app send events to Sentinel over HTTP. Create it, then copy the one-time secret into that app’s webhook settings.'
@@ -193,7 +194,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
       {error && <span className="form-error" role="alert">{error}</span>}
       {notice && <span className="connector-notice" role="status">{notice}</span>}
       {webhookToken && <div className="webhook-secret"><strong>Webhook secret · shown once</strong><code>{webhookToken}</code><button type="button" className="secondary-button" onClick={async()=>{await navigator.clipboard.writeText(webhookToken);setCopied(true)}}>{copied?<Check size={14}/>:<Copy size={14}/>} {copied?'Copied':'Copy secret'}</button><small>Send it as the X-Sentinel-Webhook-Token header. Treat it like a password.</small></div>}
-    </form>
+    </form>}
     <div className="connector-cards">
       {connectors.length ? connectors.map(connector => {
         const id = connector.id || ''
@@ -215,7 +216,7 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
               : 'Automatic common-field detection'}</dd>
             {connector.last_error && <><dt>Last error</dt><dd className="form-error">{connector.last_error}</dd></>}
           </dl>
-          <details className="connector-map-edit"><summary>Configure message translation</summary>
+          {canOperate && <details className="connector-map-edit"><summary>Configure message translation</summary>
             <p>Map fields from this connector’s JSON messages into Sentinel’s common event fields. Leave a path blank to use automatic detection. Changes apply to new messages.</p>
             <form onSubmit={event=>{
               event.preventDefault()
@@ -228,13 +229,13 @@ export function ConnectorsPage({ connectors, assets, settings, onRefresh, onNavi
               {translationTargets.map(target=><label key={target}><span>{target.replace('_', ' ')} path</span><input name={target} defaultValue={currentFieldMap[target] || ''} placeholder={target==='summary'?'alarm.message':target==='value'?'sensor.reading':target==='entity'?'device.name':''}/></label>)}
               <button className="secondary-button" disabled={workingId===id}>Save translation</button>
             </form>
-          </details>
+          </details>}
           {webhook && <small className="connector-help">The sender must be able to reach this URL. If the API address above uses localhost, change the dashboard API address to a host reachable by that sender.</small>}
-          <div className="connector-card-actions">
+          {canOperate && <div className="connector-card-actions">
             <button className="secondary-button" disabled={workingId===id} onClick={()=>void runAction(id,async()=>{const result=await testConnector(settings,id);setNotice(result.message)})}>{workingId===id?'Working…':'Test'}</button>
             <button className="secondary-button" disabled={workingId===id} onClick={()=>void runAction(id,()=>updateConnector(settings,id,{enabled:!connector.enabled}))}>{connector.enabled?<><ToggleRight size={15}/> Pause</>:<><ToggleLeft size={15}/> Resume</>}</button>
             <button className="secondary-button danger-button" disabled={workingId===id} onClick={()=>{if(window.confirm('Remove connector “'+connector.name+'”?'))void runAction(id,()=>deleteConnector(settings,id))}}><Trash2 size={14}/> Remove</button>
-          </div>
+          </div>}
         </article>
       }) : <div className="panel large-panel-empty"><strong>No event integrations configured</strong><span>Create a webhook receiver, subscribe to MQTT or WebSocket streams, or poll a REST API for JSON events.</span></div>}
     </div>
