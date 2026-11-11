@@ -6,6 +6,7 @@ from app.database.session import get_db
 from app.models.rule import RuleModel
 from app.models.alert import AlertModel
 from app.models.observation import ObservationModel
+from app.models.notification import NotificationDestinationModel
 from app.schemas.rules import Rule, RuleCreate, RuleUpdate
 from app.services.rule_engine import rule_engine
 
@@ -16,6 +17,7 @@ def _validate_condition(field, operator, value):
     parts = (field, operator, value)
     if any(part is not None for part in parts) and not all(part is not None for part in parts):
         raise HTTPException(status_code=422, detail="Numeric conditions require a field, operator, and threshold")
+
 
 
 @router.get("", response_model=list[Rule])
@@ -57,7 +59,8 @@ async def update_rule(rule_id: str, payload: RuleUpdate, db: Session = Depends(g
     model = db.query(RuleModel).filter(RuleModel.id == rule_id).first()
     if model is None:
         raise HTTPException(status_code=404, detail="Rule not found")
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    for key, value in updates.items():
         setattr(model, key, value)
     _validate_condition(model.condition_field, model.condition_operator, model.condition_value)
     db.commit()

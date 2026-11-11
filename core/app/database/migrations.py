@@ -52,3 +52,6 @@ def apply_migrations(engine: Engine) -> None:
             connection.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_user_sessions_token_hash ON user_sessions (token_hash)")
             connection.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_user_sessions_expires_at ON user_sessions (expires_at)")
             connection.exec_driver_sql("INSERT OR IGNORE INTO schema_migrations (version) VALUES (3)")
+
+        if 4 not in applied:
+            connection.exec_driver_sql("INSERT OR IGNORE INTO schema_migrations (version) VALUES (4)")

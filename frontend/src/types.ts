@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 export type HealthState = 'healthy' | 'degraded' | 'offline' | 'unknown'
-export type PageKey = 'overview' | 'observations' | 'graph' | 'entities' | 'connectors' | 'rules' | 'alerts' | 'reports' | 'plugins' | 'settings'
+export type PageKey = 'overview' | 'observations' | 'graph' | 'entities' | 'connectors' | 'rules' | 'alerts' | 'reports' | 'plugins' | 'notifications' | 'settings'
 export interface Metric { label:string; value:string; detail:string; tone:'blue'|'green'|'amber'|'red'; icon:LucideIcon }
 export interface Observation { time:string; title:string; source:string; category:string; tone:'blue'|'green'|'amber'|'red'; icon:LucideIcon }
 export interface ObservationRecord { id:string; timestamp:string; type:string; severity:string; summary:string; source:string; entity?:string; value?:unknown; raw?:unknown }

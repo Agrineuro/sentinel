@@ -19,6 +19,7 @@ from app.api.core.observations import legacy_events_router, router as observatio
 from app.api.core.relationships import router as relationships_router
 from app.api.core.vault import router as vault_router
 from app.api.core.plugins import router as plugins_router
+from app.api.core.notifications import router as notifications_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.database.session import Base, engine, SessionLocal
@@ -30,10 +31,12 @@ from app.models import observation  # noqa: F401
 from app.models import rule  # noqa: F401
 from app.models import alert  # noqa: F401
 from app.models import connector  # noqa: F401
+from app.models import notification  # noqa: F401
 from app.models.user import UserModel, UserSessionModel  # noqa: F401
 from app.services.observation_hub import observation_hub
 from app.services.asset_monitor import refresh_assets
 from app.services.proxmox_monitor import refresh_proxmox_connectors
+from app.services.notification_service import process_pending as process_notifications
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -67,20 +70,42 @@ async def _health_monitor_loop():
         await asyncio.sleep(settings.health_poll_interval_seconds)
 
 
+
+def _process_notifications_once():
+    db = SessionLocal()
+    try:
+        return process_notifications(db)
+    finally:
+        db.close()
+
+
+async def _notification_delivery_loop():
+    while True:
+        try:
+            await asyncio.to_thread(_process_notifications_once)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Notification delivery worker failed")
+        await asyncio.sleep(5)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     mqtt_runtime.start_enabled(asyncio.get_running_loop())
     http_poll_runtime.start_enabled()
     websocket_runtime.start_enabled()
     task = asyncio.create_task(_health_monitor_loop())
+    notifications_task = asyncio.create_task(_notification_delivery_loop())
     try:
         yield
     finally:
         task.cancel()
+        notifications_task.cancel()
         mqtt_runtime.stop_all()
         await http_poll_runtime.stop_all()
         await websocket_runtime.stop_all()
-        await asyncio.gather(task, return_exceptions=True)
+        await asyncio.gather(task, notifications_task, return_exceptions=True)
 
 
 app = FastAPI(
@@ -105,7 +130,7 @@ app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(auth_router, prefix=settings.api_prefix)
 protected = [observations_router, rules_router, alerts_router, reports_router,
              legacy_events_router, assets_router, relationships_router, vault_router,
-             ssh_connector_router, connectors_router, plugins_router]
+             ssh_connector_router, connectors_router, plugins_router, notifications_router]
 for router in protected:
     app.include_router(router, prefix=settings.api_prefix, dependencies=[Depends(require_user)])
 app.include_router(connector_ingest_router, prefix=settings.api_prefix)

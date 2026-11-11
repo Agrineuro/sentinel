@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.alert import AlertModel
 from app.models.observation import ObservationModel
 from app.models.rule import RuleModel
+from app.models.notification import NotificationDestinationModel, NotificationDeliveryModel, NotificationSubscriptionModel
 
 SEVERITY = {"debug": 0, "info": 1, "notice": 1, "warning": 2, "error": 3, "critical": 4}
 
@@ -73,6 +74,23 @@ class RuleEngine:
                 last_seen_at=now,
             )
             db.add(alert)
+            db.flush()
+            subscriptions = db.query(NotificationSubscriptionModel).filter(
+                NotificationSubscriptionModel.rule_id == rule.id,
+            ).all()
+            for subscription in subscriptions:
+                destination = db.query(NotificationDestinationModel).filter(
+                    NotificationDestinationModel.id == subscription.destination_id,
+                    NotificationDestinationModel.owner_user_id == subscription.user_id,
+                    NotificationDestinationModel.enabled.is_(True),
+                    NotificationDestinationModel.status.in_(["verified", "error"]),
+                ).first()
+                if destination is not None:
+                    db.add(NotificationDeliveryModel(
+                        id=f"delivery_{uuid4().hex}", alert_id=alert.id,
+                        destination_id=destination.id, status="pending", attempts=0,
+                        next_attempt_at=now,
+                    ))
             created.append(alert)
         return created
 

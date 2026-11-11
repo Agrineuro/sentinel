@@ -6,6 +6,7 @@ const RulesPage = lazy(() => import('./components/RulesPage').then(module => ({ 
 const AlertsPage = lazy(() => import('./components/AlertsPage').then(module => ({ default: module.AlertsPage })))
 const ReportsPage = lazy(() => import('./components/ReportsPage').then(module => ({ default: module.ReportsPage })))
 const PluginsPage = lazy(() => import('./components/PluginsPage').then(module => ({ default: module.PluginsPage })))
+const NotificationsPage = lazy(() => import('./components/NotificationsPage').then(module => ({ default: module.NotificationsPage })))
 import { createRelationship, deleteRelationship, createRule, updateRule, deleteRule, updateAlert } from './api/client'
 import { MetricCards } from './components/MetricCards'
 const ObservationsPage = lazy(() => import('./components/ObservationsPage').then(module => ({ default: module.ObservationsPage })))
@@ -122,6 +123,10 @@ export default function App() {
 
     if (page === 'reports') {
       return <ReportsPage report={data.report} />
+    }
+
+    if (page === 'notifications') {
+      return <NotificationsPage settings={settings} />
     }
 
     if (page === 'plugins') {

@@ -184,6 +184,59 @@ export async function installPlugin(settings: SentinelSettings, pluginId: string
   return result.plugin
 }
 
+export interface NotificationDestination {
+  id: string
+  name: string
+  channel_type: 'email' | 'sms'
+  masked_destination: string
+  enabled: boolean
+  status: string
+  last_error?: string | null
+  created_at: string
+}
+export interface NotificationDelivery {
+  id: string
+  alert_id: string
+  alert_title: string
+  destination_name: string
+  channel_type: string
+  status: string
+  attempts: number
+  last_error?: string | null
+  sent_at?: string | null
+}
+export async function getNotificationDestinations(settings: SentinelSettings): Promise<NotificationDestination[]> {
+  return request<NotificationDestination[]>(settings, '/notifications/destinations')
+}
+export async function getNotificationSubscriptions(settings: SentinelSettings): Promise<Record<string, string[]>> {
+  return request<Record<string, string[]>>(settings, '/notifications/subscriptions')
+}
+export async function updateNotificationSubscriptions(settings: SentinelSettings, ruleId: string, destinationIds: string[]): Promise<string[]> {
+  const result = await request<{ rule_id: string; destination_ids: string[] }>(
+    settings, '/notifications/subscriptions/' + encodeURIComponent(ruleId),
+    { method: 'PUT', body: JSON.stringify({ destination_ids: destinationIds }) },
+  )
+  return result.destination_ids
+}
+export async function createNotificationDestination(settings: SentinelSettings, payload: {
+  name: string
+  channel_type: 'email' | 'sms'
+  destination: string
+  provider_secret: string
+  config: Record<string, unknown>
+}): Promise<NotificationDestination> {
+  return request<NotificationDestination>(settings, '/notifications/destinations', { method: 'POST', body: JSON.stringify(payload) })
+}
+export async function testNotificationDestination(settings: SentinelSettings, id: string): Promise<{ status: string; message: string }> {
+  return request(settings, '/notifications/destinations/' + encodeURIComponent(id) + '/test', { method: 'POST' })
+}
+export async function updateNotificationDestination(settings: SentinelSettings, id: string, enabled: boolean): Promise<NotificationDestination> {
+  return request<NotificationDestination>(settings, '/notifications/destinations/' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify({ enabled }) })
+}
+export async function getNotificationDeliveries(settings: SentinelSettings): Promise<NotificationDelivery[]> {
+  return request<NotificationDelivery[]>(settings, '/notifications/deliveries?limit=50')
+}
+
 export interface ConnectorCreateResult extends Connector {
   webhook_token?: string | null
 }
