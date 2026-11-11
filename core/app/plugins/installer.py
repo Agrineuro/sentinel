@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from urllib.parse import urlparse
 
 from fastapi import HTTPException
 from app.core.config import settings
@@ -25,8 +26,9 @@ def _fetch(url: str, limit: int) -> bytes:
     request = Request(url, headers={"Accept": "application/json", "User-Agent": "Sentinel-Plugin-Manager/1"})
     try:
         with urlopen(request, timeout=12, context=ssl.create_default_context()) as response:
-            if response.status != 200:
-                raise HTTPException(status_code=502, detail="GitHub did not return the requested plugin file")
+            final_url = urlparse(response.geturl())
+            if response.status != 200 or final_url.scheme != "https" or final_url.hostname != "raw.githubusercontent.com":
+                raise HTTPException(status_code=502, detail="GitHub returned an unexpected download destination")
             body = response.read(limit + 1)
     except HTTPException:
         raise
