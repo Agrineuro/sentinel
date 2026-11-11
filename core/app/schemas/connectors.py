@@ -55,6 +55,8 @@ class ConnectorCreate(BaseModel):
                 raise ValueError("Proxmox URL must be an absolute HTTPS URL without embedded credentials")
             if "!" not in str(self.username or "") or not self.password:
                 raise ValueError("Proxmox requires an API token ID and secret")
+            if "verify_tls" in self.config and not isinstance(self.config.get("verify_tls"), bool):
+                raise ValueError("Proxmox TLS verification setting must be true or false")
             try:
                 interval = int(self.config.get("poll_interval_seconds", 60))
             except (TypeError, ValueError) as exc:
