@@ -1,13 +1,19 @@
 # Sentinel plugins
 
-This directory is the source of truth for the official optional plugin catalog shown in the Sentinel dashboard. Plugins are kept out of Sentinel Core so small deployments, including Raspberry Pi installations, only add integrations they need.
+This directory contains the official plugin catalog and contributor guidance. The catalog is displayed in Sentinel and links to source packages hosted in this repository.
+
+## Runtime status
+
+Sentinel Core currently loads built-in plugins from core/app/plugins/builtins and trusted plugin folders under the configured PLUGIN_DIR (default /data/plugins) when Core starts. Plugins execute in-process with Core permissions. Only install code you trust.
+
+The Proxmox connector is included in Core and can be configured in Connectors. It uses a read-only API token, polls inventory, creates node/VM/container/storage assets, links guests to their hosting node, and records status changes as observations. It does not install plugins directly from GitHub yet. To add an external plugin today, place its package folder in PLUGIN_DIR and restart Core.
 
 ## Catalog
 
-catalog.json is fetched by the dashboard from the raw GitHub URL. Keep it valid JSON and update it in the same change as each plugin. An entry with status "planned" is a roadmap item and is not installable.
+catalog.json is fetched by the dashboard from the raw GitHub URL. Keep it valid JSON and update it alongside each plugin. An entry marked planned is a roadmap item and is not runtime-installable.
 
-## Developing a connector plugin
+## Developing connector plugins
 
-Start with templates/connector. The template defines metadata and contribution expectations; it is not yet a runtime-installable package. The runtime plugin loader, installation and upgrade flow, and stable SDK are still being built.
+Start with templates/connector. Each plugin package contains a manifest.json and Python module exposing create_plugin(). This is an initial internal contract; a stable SDK, isolation boundary, and dashboard install/upgrade workflow are future work.
 
-Initial plugin priorities are broad, optional integrations: SNMP monitoring, Syslog, Prometheus metrics, and Docker/container monitoring. Each plugin must state whether it reads, receives events, sends messages, or performs actions. Use read-only access by default.
+Initial optional plugin priorities are SNMP monitoring, Syslog, Prometheus metrics, and Docker/container monitoring. Each plugin must state whether it reads, receives events, sends messages, or performs actions. Use read-only access by default.

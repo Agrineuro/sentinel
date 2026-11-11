@@ -18,7 +18,12 @@ class ConnectorService:
 
     def create(self, db: Session, payload: ConnectorCreate) -> tuple[ConnectorModel, str | None]:
         credential_id = None
-        if payload.connector_type == "mqtt" and payload.username and payload.password:
+        if payload.connector_type == "proxmox" and payload.username and payload.password:
+            credential = vault_service.create_credential(
+                db, CredentialCreate(name=payload.name + " Proxmox API token",
+                username=payload.username, password=payload.password, credential_type="proxmox_api_token"))
+            credential_id = credential.id
+        elif payload.connector_type == "mqtt" and payload.username and payload.password:
             credential = vault_service.create_credential(
                 db,
                 CredentialCreate(name=payload.name + " MQTT credentials", username=payload.username,
@@ -41,6 +46,10 @@ class ConnectorService:
         config = {}
         translation = payload.config.get("translation") or {}
         config = {"translation": {"field_map": dict(translation.get("field_map") or {})}} if translation.get("field_map") else {}
+        if payload.connector_type == "proxmox":
+            config.update({"url":str(payload.config["url"]).strip().rstrip("/"),
+                "verify_tls":bool(payload.config.get("verify_tls",True)),
+                "poll_interval_seconds":int(payload.config.get("poll_interval_seconds",60))})
         if payload.connector_type == "websocket":
             config.update({"url": str(payload.config["url"]).strip(),
                            "auth_type": str(payload.config.get("auth_type", "none"))})
@@ -64,7 +73,7 @@ class ConnectorService:
             id="conn_" + uuid4().hex,
             name=payload.name.strip(),
             connector_type=payload.connector_type,
-            direction="inbound",
+            direction="monitoring" if payload.connector_type == "proxmox" else "inbound",
             enabled=payload.enabled,
             status=("starting" if payload.enabled and payload.connector_type in {"mqtt", "http_poll", "websocket"}
                     else "ready" if payload.enabled else "disabled"),

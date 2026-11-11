@@ -125,7 +125,7 @@ export default function App() {
     }
 
     if (page === 'plugins') {
-      return <PluginsPage />
+      return <PluginsPage settings={settings} onConfigure={() => setPage('connectors')} />
     }
 
     if (page === 'graph') {

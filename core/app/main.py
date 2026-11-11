@@ -18,6 +18,7 @@ from app.api.core.health import router as health_router
 from app.api.core.observations import legacy_events_router, router as observations_router
 from app.api.core.relationships import router as relationships_router
 from app.api.core.vault import router as vault_router
+from app.api.core.plugins import router as plugins_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.database.session import Base, engine, SessionLocal
@@ -32,6 +33,7 @@ from app.models import connector  # noqa: F401
 from app.models.user import UserModel, UserSessionModel  # noqa: F401
 from app.services.observation_hub import observation_hub
 from app.services.asset_monitor import refresh_assets
+from app.services.proxmox_monitor import refresh_proxmox_connectors
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -42,7 +44,9 @@ apply_migrations(engine)
 def _refresh_health_once():
     db = SessionLocal()
     try:
-        return refresh_assets(db)
+        assets = refresh_assets(db)
+        proxmox_observations = refresh_proxmox_connectors(db)
+        return assets, proxmox_observations
     finally:
         db.close()
 
@@ -50,10 +54,12 @@ def _refresh_health_once():
 async def _health_monitor_loop():
     while True:
         try:
-            systems = await asyncio.to_thread(_refresh_health_once)
+            systems, proxmox_observations = await asyncio.to_thread(_refresh_health_once)
             for system in systems:
                 if system.get("observation"):
                     await observation_hub.broadcast(system["observation"])
+            for observation in proxmox_observations:
+                await observation_hub.broadcast(observation)
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -99,7 +105,7 @@ app.include_router(health_router, prefix=settings.api_prefix)
 app.include_router(auth_router, prefix=settings.api_prefix)
 protected = [observations_router, rules_router, alerts_router, reports_router,
              legacy_events_router, assets_router, relationships_router, vault_router,
-             ssh_connector_router, connectors_router]
+             ssh_connector_router, connectors_router, plugins_router]
 for router in protected:
     app.include_router(router, prefix=settings.api_prefix, dependencies=[Depends(require_user)])
 app.include_router(connector_ingest_router, prefix=settings.api_prefix)

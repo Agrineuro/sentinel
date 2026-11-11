@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "sentinel.connector.proxmox",
+  "name": "Proxmox VE",
+  "version": "0.1.0",
+  "minimum_core_version": "0.1.0",
+  "connector_type": "proxmox",
+  "module": "plugin.py",
+  "description": "Read-only inventory and health monitoring for Proxmox VE hosts, VMs, containers, and storage.",
+  "capabilities": [
+    "monitor",
+    "asset_discovery",
+    "read_only"
+  ],
+  "permissions": [
+    "network:configured_proxmox_api"
+  ],
+  "configuration_schema": {
+    "url": {
+      "type": "url",
+      "required": true,
+      "scheme": "https"
+    },
+    "token_id": {
+      "type": "secret_reference",
+      "required": true
+    },
+    "token_secret": {
+      "type": "secret_reference",
+      "required": true
+    },
+    "verify_tls": {
+      "type": "boolean",
+      "default": true
+    },
+    "poll_interval_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 3600,
+      "default": 60
+    }
+  }
+}

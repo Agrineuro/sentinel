@@ -15,6 +15,19 @@
       "source_path": "templates/connector"
     },
     {
+      "id": "sentinel.connector.proxmox",
+      "name": "Proxmox VE",
+      "category": "Infrastructure",
+      "status": "available",
+      "description": "Read-only inventory and health monitoring for Proxmox nodes, virtual machines, containers, and storage.",
+      "capabilities": [
+        "read-only monitoring",
+        "asset discovery",
+        "CPU and memory metrics"
+      ],
+      "source_path": "core/app/plugins/builtins/proxmox"
+    },
+    {
       "id": "sentinel.connector.snmp",
       "name": "SNMP Monitoring",
       "category": "Monitoring",

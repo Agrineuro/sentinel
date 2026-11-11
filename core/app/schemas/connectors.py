@@ -21,7 +21,7 @@ def validate_field_map(field_map):
 
 class ConnectorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    connector_type: Literal["webhook", "mqtt", "http_poll", "websocket"]
+    connector_type: Literal["webhook", "mqtt", "http_poll", "websocket", "proxmox"]
     enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
     username: str | None = Field(default=None, max_length=200)
@@ -48,6 +48,19 @@ class ConnectorCreate(BaseModel):
                 raise ValueError("MQTT QoS must be 0, 1, or 2")
             if bool(self.username) != bool(self.password):
                 raise ValueError("Provide both MQTT username and password")
+        if self.connector_type == "proxmox":
+            url = str(self.config.get("url") or "").strip()
+            parsed = urlparse(url)
+            if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("Proxmox URL must be an absolute HTTPS URL without embedded credentials")
+            if "!" not in str(self.username or "") or not self.password:
+                raise ValueError("Proxmox requires an API token ID and secret")
+            try:
+                interval = int(self.config.get("poll_interval_seconds", 60))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("Proxmox polling interval must be a number") from exc
+            if not 30 <= interval <= 3600:
+                raise ValueError("Proxmox polling interval must be between 30 and 3600 seconds")
         if self.connector_type == "websocket":
             url = str(self.config.get("url") or "").strip()
             parsed = urlparse(url)

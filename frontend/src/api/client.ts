@@ -160,13 +160,27 @@ export async function getConnectors(settings: SentinelSettings): Promise<Connect
   const rows = await request<Array<Record<string, unknown>>>(settings, '/connectors')
   return rows.map(normalizeConnector)
 }
+export interface PluginRecord {
+  id: string
+  name: string
+  version: string
+  connector_type: string
+  description: string
+  capabilities: string[]
+  permissions: string[]
+  status: string
+}
+export async function getPlugins(settings: SentinelSettings): Promise<PluginRecord[]> {
+  const result = await request<{ plugins: PluginRecord[] }>(settings, '/plugins')
+  return result.plugins
+}
 
 export interface ConnectorCreateResult extends Connector {
   webhook_token?: string | null
 }
 export async function createConnector(settings: SentinelSettings, payload: {
   name: string
-  connector_type: 'webhook' | 'mqtt' | 'http_poll' | 'websocket'
+  connector_type: 'webhook' | 'mqtt' | 'http_poll' | 'websocket' | 'proxmox'
   enabled: boolean
   config: Record<string, unknown>
   username?: string

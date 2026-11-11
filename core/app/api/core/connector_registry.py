@@ -16,6 +16,7 @@ from app.schemas.connectors import ConnectorCreate, ConnectorCreated, ConnectorR
 from app.services.connector_ingest import broadcast_ingested, ingest_connector_payload
 from app.services.connector_service import connector_service
 from app.vault.service import vault_service
+from app.plugins.registry import plugin_registry
 
 router = APIRouter(prefix="/connectors", tags=["connectors"])
 ingest_router = APIRouter(prefix="/connectors/ingest", tags=["connector-ingest"])
@@ -83,7 +84,16 @@ async def test_connector(connector_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Connector not found")
     started = time.monotonic()
     try:
-        if model.connector_type == "webhook":
+        if model.connector_type == "proxmox":
+            plugin = plugin_registry.get_connector("proxmox")
+            if plugin is None:
+                raise RuntimeError("Proxmox plugin is not loaded")
+            credential = vault_service.get(db, model.credential_id) if model.credential_id else None
+            if credential is None or credential.credential_type != "proxmox_api_token":
+                raise RuntimeError("Stored Proxmox API token is unavailable")
+            result = await asyncio.to_thread(plugin.test, model.config, credential.username, credential.secret)
+            message = "Connected to Proxmox " + result["version"] + "; found " + str(result["nodes"]) + " nodes and " + str(result["guests"]) + " guests"
+        elif model.connector_type == "webhook":
             if not model.webhook_token_hash:
                 raise RuntimeError("Webhook secret is missing")
             message = "Webhook receiver is ready; send a signed JSON event to the ingest URL"
