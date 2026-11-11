@@ -1,18 +1,18 @@
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { BottomPanels } from './components/BottomPanels'
-import { EntitiesPage } from './components/EntitiesPage'
-import { ConnectorsPage } from './components/ConnectorsPage'
-import { RulesPage } from './components/RulesPage'
-import { AlertsPage } from './components/AlertsPage'
-import { ReportsPage } from './components/ReportsPage'
-import { PluginsPage } from './components/PluginsPage'
+const EntitiesPage = lazy(() => import('./components/EntitiesPage').then(module => ({ default: module.EntitiesPage })))
+const ConnectorsPage = lazy(() => import('./components/ConnectorsPage').then(module => ({ default: module.ConnectorsPage })))
+const RulesPage = lazy(() => import('./components/RulesPage').then(module => ({ default: module.RulesPage })))
+const AlertsPage = lazy(() => import('./components/AlertsPage').then(module => ({ default: module.AlertsPage })))
+const ReportsPage = lazy(() => import('./components/ReportsPage').then(module => ({ default: module.ReportsPage })))
+const PluginsPage = lazy(() => import('./components/PluginsPage').then(module => ({ default: module.PluginsPage })))
 import { createRelationship, deleteRelationship, createRule, updateRule, deleteRule, updateAlert } from './api/client'
 import { MetricCards } from './components/MetricCards'
-import { ObservationsPage } from './components/ObservationsPage'
+const ObservationsPage = lazy(() => import('./components/ObservationsPage').then(module => ({ default: module.ObservationsPage })))
 import { RightRail } from './components/RightRail'
-import { SettingsPage } from './components/SettingsPage'
+const SettingsPage = lazy(() => import('./components/SettingsPage').then(module => ({ default: module.SettingsPage })))
 import { Sidebar } from './components/Sidebar'
-import { SystemGraph } from './components/SystemGraph'
+const SystemGraph = lazy(() => import('./components/SystemGraph').then(module => ({ default: module.SystemGraph })))
 import { Topbar } from './components/Topbar'
 import {
   loadSettings,
@@ -125,7 +125,7 @@ export default function App() {
     }
 
     if (page === 'plugins') {
-      return <PluginsPage settings={settings} onConfigure={() => setPage('connectors')} />
+      return <PluginsPage settings={settings} canManage={user.role === 'admin'} onConfigure={() => setPage('connectors')} />
     }
 
     if (page === 'graph') {
@@ -234,7 +234,7 @@ export default function App() {
             </div>
           )}
 
-          {content}
+          <Suspense fallback={<div className="panel large-panel-empty"><strong>Loading page...</strong></div>}>{content}</Suspense>
         </main>
 
         <footer className="statusbar">

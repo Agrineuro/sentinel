@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, Cable, Download, Puzzle, RefreshCw, Settings2 } from 'lucide-react'
-import { getPlugins, type PluginRecord } from '../api/client'
+import { getPlugins, installPlugin, type PluginRecord } from '../api/client'
 import type { SentinelSettings } from '../config'
 
 const CATALOG_URL = 'https://raw.githubusercontent.com/Agrineuro/sentinel/master/plugins/catalog.json'
@@ -15,6 +15,7 @@ type PluginEntry = {
   description: string
   capabilities: string[]
   source_path?: string | null
+  install_files?: Record<string, string>
 }
 type PluginCatalog = { schema_version: number; repository: string; plugins: PluginEntry[] }
 
@@ -25,11 +26,13 @@ function statusLabel(status: string) {
   return 'Planned'
 }
 
-export function PluginsPage({ settings, onConfigure }: { settings: SentinelSettings; onConfigure: () => void }) {
+export function PluginsPage({ settings, onConfigure, canManage }: { settings: SentinelSettings; onConfigure: () => void; canManage: boolean }) {
   const [catalog, setCatalog] = useState<PluginCatalog | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [loadedPlugins, setLoadedPlugins] = useState<PluginRecord[]>([])
+  const [workingPlugin, setWorkingPlugin] = useState('')
+  const [actionError, setActionError] = useState('')
 
   async function loadCatalog() {
     setLoading(true)
@@ -63,9 +66,26 @@ export function PluginsPage({ settings, onConfigure }: { settings: SentinelSetti
     }).catch(() => setLoadedPlugins([]))
   }, [settings])
 
+  async function installOrUpdate(plugin: PluginEntry) {
+    const loaded = loadedPlugins.some(item => item.id === plugin.id)
+    const verb = loaded ? 'Update' : 'Install'
+    if (!window.confirm(verb + ' ' + plugin.name + ' from the official Sentinel GitHub catalog? Plugin code runs inside Sentinel Core with Core permissions.')) return
+    setWorkingPlugin(plugin.id)
+    setActionError('')
+    try {
+      await installPlugin(settings, plugin.id)
+      setLoadedPlugins(await getPlugins(settings))
+    } catch (reason) {
+      setActionError(reason instanceof Error ? reason.message : 'Could not ' + verb.toLowerCase() + ' plugin')
+    } finally {
+      setWorkingPlugin('')
+    }
+  }
+
   return <section className="functional-page plugins-page">
     <div className="page-title"><div><span>Optional integrations</span><h1>Plugins</h1><p>Keep Sentinel Core small and add connector capabilities when you need them.</p></div><a className="secondary-button plugin-github-link" href={PLUGINS_DIRECTORY} target="_blank" rel="noreferrer"><ArrowUpRight size={15}/> GitHub plugin source</a></div>
-    <div className="plugin-intro panel"><Puzzle size={19}/><div><strong>Extend Sentinel without bloating the base install</strong><p>The catalog loads from Sentinel on GitHub. Loaded in Core means the connector is ready to configure; other entries link to source or planned work. GitHub installation from this page is not enabled yet.</p></div></div>
+    <div className="plugin-intro panel"><Puzzle size={19}/><div><strong>Extend Sentinel without bloating the base install</strong><p>The catalog loads from Sentinel on GitHub. Loaded in Core means the connector is ready to configure; other entries link to source or planned work. Administrators can install or update checksum-verified catalog packages. Plugin code runs inside Core with Core permissions.</p></div></div>
+    {actionError && <div className="panel plugin-load-error" role="alert"><span>{actionError}</span><button className="secondary-button" onClick={() => setActionError("")}>Dismiss</button></div>}
     {error && <div className="panel plugin-load-error" role="status"><span>Could not load the live GitHub catalog: {error}</span><button className="secondary-button" onClick={() => void loadCatalog()}><RefreshCw size={14}/> Retry</button></div>}
     {loading && <div className="panel large-panel-empty"><strong>Loading plugin catalog...</strong></div>}
     {!loading && catalog && <div className="plugin-grid">{catalog.plugins.map(plugin => {
@@ -75,10 +95,15 @@ export function PluginsPage({ settings, onConfigure }: { settings: SentinelSetti
         <div className="plugin-card-head"><span className="plugin-icon"><Cable size={17}/></span><span className={'plugin-status ' + (loaded ? 'available' : plugin.status)}>{loaded ? 'Loaded in Core' : statusLabel(plugin.status)}</span></div>
         <span className="plugin-category">{plugin.category}</span><h2>{plugin.name}</h2><p>{plugin.description}</p>
         <div className="plugin-capabilities">{plugin.capabilities.map(capability => <span key={capability}>{capability}</span>)}</div>
-        {loaded ? <button className="secondary-button" onClick={onConfigure}><Settings2 size={14}/> Configure connection</button> : <a className="secondary-button" href={sourceUrl} target="_blank" rel="noreferrer"><ArrowUpRight size={14}/> {plugin.source_path ? 'View source on GitHub' : 'View GitHub catalog'}</a>}
+        {loaded && <button className="secondary-button" onClick={onConfigure}><Settings2 size={14}/> Configure connection</button>}
+        {plugin.status === 'available' && plugin.install_files && canManage
+          ? <button className="secondary-button" disabled={workingPlugin === plugin.id} onClick={() => void installOrUpdate(plugin)}>
+              <Download size={14}/> {workingPlugin === plugin.id ? 'Installing...' : loaded ? 'Update from GitHub' : 'Install from GitHub'}
+            </button>
+          : !loaded && <a className="secondary-button" href={sourceUrl} target="_blank" rel="noreferrer"><ArrowUpRight size={14}/> {plugin.source_path ? 'View source on GitHub' : 'View GitHub catalog'}</a>}
       </article>
     })}</div>}
     {!loading && !catalog && <div className="panel large-panel-empty"><strong>Plugin catalog unavailable</strong><span>Sentinel still works. Check the GitHub connection and retry.</span></div>}
-    <p className="plugin-install-note"><Download size={14}/> Loaded plugins run through the Sentinel connector registry. Planned connectors remain catalog entries until their packages are added to GitHub and the install workflow is enabled.</p>
+    <p className="plugin-install-note"><Download size={14}/> Available packages are checksum-verified against the official catalog before Core installs them. Only administrators can install or update plugins.</p>
   </section>
 }

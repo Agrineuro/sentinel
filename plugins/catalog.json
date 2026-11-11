@@ -25,7 +25,11 @@
         "asset discovery",
         "CPU and memory metrics"
       ],
-      "source_path": "core/app/plugins/builtins/proxmox"
+      "source_path": "core/app/plugins/builtins/proxmox",
+      "install_files": {
+        "manifest.json": "3bd0dcb7e6170f6d508cf4398c414b96481b71c7b2a23061a32ae32c80ae4ec8",
+        "plugin.py": "61f9d2762e3384fcea7306f5a0e6c4423036814c07c64e4f896ceca5b3b7f8ed"
+      }
     },
     {
       "id": "sentinel.connector.snmp",

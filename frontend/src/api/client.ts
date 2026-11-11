@@ -175,6 +175,15 @@ export async function getPlugins(settings: SentinelSettings): Promise<PluginReco
   return result.plugins
 }
 
+export async function installPlugin(settings: SentinelSettings, pluginId: string): Promise<PluginRecord> {
+  const result = await request<{ plugin: PluginRecord; message: string }>(
+    settings,
+    '/plugins/' + encodeURIComponent(pluginId) + '/install',
+    { method: 'POST' },
+  )
+  return result.plugin
+}
+
 export interface ConnectorCreateResult extends Connector {
   webhook_token?: string | null
 }
