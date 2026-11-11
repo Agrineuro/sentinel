@@ -169,6 +169,9 @@ export interface PluginRecord {
   capabilities: string[]
   permissions: string[]
   status: string
+  connection_mode?: string
+  configuration_schema?: Record<string, { type?: string; label?: string; required?: boolean; default?: unknown; minimum?: number; maximum?: number; max_length?: number; schemes?: string[] }>
+  credentials?: { required?: boolean; username_label?: string; secret_label?: string; credential_type?: string }
 }
 export async function getPlugins(settings: SentinelSettings): Promise<PluginRecord[]> {
   const result = await request<{ plugins: PluginRecord[] }>(settings, '/plugins')
@@ -242,7 +245,7 @@ export interface ConnectorCreateResult extends Connector {
 }
 export async function createConnector(settings: SentinelSettings, payload: {
   name: string
-  connector_type: 'webhook' | 'mqtt' | 'http_poll' | 'websocket' | 'proxmox'
+  connector_type: string
   enabled: boolean
   config: Record<string, unknown>
   username?: string

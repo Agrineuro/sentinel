@@ -48,6 +48,13 @@ class PluginRegistry:
         row = self._plugins.get(connector_type)
         return row["plugin"] if row else None
 
+    def get_manifest(self, connector_type: str):
+        row = self._plugins.get(connector_type)
+        return row["manifest"] if row else None
+
+    def iter_connectors(self):
+        return list(self._plugins.items())
+
     def list_plugins(self):
         result = []
         for row in self._plugins.values():
@@ -56,6 +63,9 @@ class PluginRegistry:
                 "id": manifest["id"], "name": manifest["name"], "version": manifest["version"],
                 "connector_type": manifest["connector_type"], "description": manifest.get("description", ""),
                 "capabilities": manifest.get("capabilities", []), "permissions": manifest.get("permissions", []),
+                "connection_mode": manifest.get("connection_mode", "event"),
+                "configuration_schema": manifest.get("configuration_schema", {}),
+                "credentials": manifest.get("credentials", {}),
                 "status": "loaded",
             })
         return sorted(result, key=lambda item: item["name"].casefold())

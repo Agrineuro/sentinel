@@ -114,6 +114,18 @@ async def test_connector(connector_id: str, db: Session = Depends(get_db)):
             credential = vault_service.get(db, model.credential_id) if model.credential_id else None
             await websocket_runtime.test(model.config, credential)
             message = "WebSocket handshake succeeded"
+        elif plugin_registry.get_manifest(model.connector_type):
+            plugin = plugin_registry.get_connector(model.connector_type)
+            if plugin is None or not callable(getattr(plugin, "test", None)):
+                raise RuntimeError("Plugin does not provide a connection test")
+            manifest = plugin_registry.get_manifest(model.connector_type)
+            credential = vault_service.get(db, model.credential_id) if model.credential_id else None
+            result = await asyncio.to_thread(
+                plugin.test, model.config,
+                credential.username if credential else None,
+                credential.secret if credential else None,
+            )
+            message = str(result.get("message") or (manifest["name"] + " connection succeeded"))
         else:
             raise RuntimeError("Unsupported connector type")
         model.status = "ready" if model.connector_type == "webhook" else "connected"

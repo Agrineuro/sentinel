@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "sentinel.connector.modbus-tcp",
+  "name": "Modbus TCP",
+  "version": "0.1.0",
+  "minimum_core_version": "0.1.0",
+  "connector_type": "modbus_tcp",
+  "module": "plugin.py",
+  "description": "Read-only polling of configured Modbus TCP holding registers, suitable for sensor gateways and industrial equipment.",
+  "connection_mode": "monitoring",
+  "capabilities": [
+    "read-only monitoring",
+    "register polling",
+    "asset discovery"
+  ],
+  "permissions": [
+    "network:configured_modbus_endpoint"
+  ],
+  "credentials": {},
+  "configuration_schema": {
+    "host": {
+      "type": "string",
+      "required": true,
+      "max_length": 253,
+      "label": "Modbus host or gateway IP"
+    },
+    "port": {
+      "type": "integer",
+      "required": true,
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 502,
+      "label": "TCP port"
+    },
+    "unit_id": {
+      "type": "integer",
+      "required": true,
+      "minimum": 1,
+      "maximum": 247,
+      "default": 1,
+      "label": "Unit ID"
+    },
+    "register_map": {
+      "type": "textarea",
+      "required": true,
+      "max_length": 5000,
+      "label": "Holding register map"
+    },
+    "poll_interval_seconds": {
+      "type": "integer",
+      "required": true,
+      "minimum": 15,
+      "maximum": 3600,
+      "default": 30,
+      "label": "Poll interval (seconds)"
+    }
+  }
+}

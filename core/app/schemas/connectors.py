@@ -1,8 +1,10 @@
 from datetime import datetime
 import re
-from typing import Any, Literal
+from typing import Any
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field, model_validator
+
+from app.plugins.registry import plugin_registry
 
 FIELD_MAP_TARGETS = {"type", "severity", "summary", "timestamp", "entity", "entity_id", "value"}
 
@@ -21,7 +23,7 @@ def validate_field_map(field_map):
 
 class ConnectorCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    connector_type: Literal["webhook", "mqtt", "http_poll", "websocket", "proxmox"]
+    connector_type: str = Field(min_length=1, max_length=100)
     enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
     username: str | None = Field(default=None, max_length=200)
@@ -32,6 +34,51 @@ class ConnectorCreate(BaseModel):
         translation = self.config.get("translation") or {}
         field_map = translation.get("field_map", {}) if isinstance(translation, dict) else None
         validate_field_map(field_map)
+        supported = {"webhook", "mqtt", "http_poll", "websocket", "proxmox"}
+        manifest = plugin_registry.get_manifest(self.connector_type)
+        if self.connector_type not in supported and manifest is None:
+            raise ValueError("Connector type is not built in or provided by a loaded plugin")
+        if manifest is not None and self.connector_type not in supported:
+            fields = manifest.get("configuration_schema", {})
+            if not isinstance(fields, dict):
+                raise ValueError("Plugin configuration schema is invalid")
+            unknown = set(self.config) - set(fields) - {"translation"}
+            if unknown:
+                raise ValueError("Unsupported plugin configuration field: " + sorted(unknown)[0])
+            for key, spec in fields.items():
+                if not isinstance(spec, dict):
+                    raise ValueError("Plugin configuration schema is invalid")
+                value = self.config.get(key, spec.get("default"))
+                if spec.get("required") and value in (None, ""):
+                    raise ValueError("Plugin setting is required: " + key)
+                if value is None:
+                    continue
+                kind = spec.get("type", "string")
+                if kind in {"string", "textarea", "url"} and not isinstance(value, str):
+                    raise ValueError("Plugin setting must be text: " + key)
+                if kind in {"string", "textarea", "url"} and "max_length" in spec and len(value) > spec["max_length"]:
+                    raise ValueError("Plugin setting exceeds maximum length: " + key)
+                if kind in {"string", "textarea", "url"} and spec.get("minimum_length") and len(value) < spec["minimum_length"]:
+                    raise ValueError("Plugin setting is too short: " + key)
+                if kind == "integer" and (isinstance(value, bool) or not isinstance(value, int)):
+                    raise ValueError("Plugin setting must be an integer: " + key)
+                if kind == "boolean" and not isinstance(value, bool):
+                    raise ValueError("Plugin setting must be true or false: " + key)
+                if kind == "url":
+                    parsed = urlparse(value)
+                    schemes = spec.get("schemes", ["https"])
+                    if not parsed.hostname or parsed.scheme not in schemes or parsed.username or parsed.password:
+                        raise ValueError("Plugin URL is invalid: " + key)
+                if kind == "integer":
+                    if "minimum" in spec and value < spec["minimum"]:
+                        raise ValueError("Plugin setting is below minimum: " + key)
+                    if "maximum" in spec and value > spec["maximum"]:
+                        raise ValueError("Plugin setting exceeds maximum: " + key)
+            credential_spec = manifest.get("credentials", {})
+            if credential_spec.get("required") and not self.password:
+                raise ValueError("Plugin credential is required")
+            if bool(self.username) != bool(self.password):
+                raise ValueError("Provide both plugin credential fields")
         if self.connector_type == "mqtt":
             if not str(self.config.get("host") or "").strip():
                 raise ValueError("MQTT host is required")

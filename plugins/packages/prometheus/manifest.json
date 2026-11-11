@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "sentinel.connector.prometheus",
+  "name": "Prometheus Metrics",
+  "version": "0.1.0",
+  "minimum_core_version": "0.1.0",
+  "connector_type": "prometheus",
+  "module": "plugin.py",
+  "description": "Read-only query collection from Prometheus-compatible APIs.",
+  "connection_mode": "monitoring",
+  "capabilities": [
+    "read-only monitoring",
+    "metric collection",
+    "asset discovery"
+  ],
+  "permissions": [
+    "network:configured_prometheus_api"
+  ],
+  "credentials": {
+    "credential_type": "prometheus_basic",
+    "required": false,
+    "username_label": "Username",
+    "secret_label": "Password"
+  },
+  "configuration_schema": {
+    "url": {
+      "type": "url",
+      "required": true,
+      "schemes": [
+        "http",
+        "https"
+      ],
+      "label": "Prometheus API URL"
+    },
+    "query": {
+      "type": "string",
+      "required": true,
+      "default": "up",
+      "max_length": 500,
+      "label": "PromQL query"
+    },
+    "poll_interval_seconds": {
+      "type": "integer",
+      "required": true,
+      "minimum": 15,
+      "maximum": 3600,
+      "default": 60,
+      "label": "Poll interval (seconds)"
+    },
+    "verify_tls": {
+      "type": "boolean",
+      "required": true,
+      "default": true,
+      "label": "Verify TLS certificate"
+    }
+  }
+}

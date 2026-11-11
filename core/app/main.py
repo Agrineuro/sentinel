@@ -36,6 +36,7 @@ from app.models.user import UserModel, UserSessionModel  # noqa: F401
 from app.services.observation_hub import observation_hub
 from app.services.asset_monitor import refresh_assets
 from app.services.proxmox_monitor import refresh_proxmox_connectors
+from app.services.plugin_monitor import refresh_plugin_monitors
 from app.services.notification_service import process_pending as process_notifications
 
 configure_logging()
@@ -49,7 +50,8 @@ def _refresh_health_once():
     try:
         assets = refresh_assets(db)
         proxmox_observations = refresh_proxmox_connectors(db)
-        return assets, proxmox_observations
+        plugin_observations = refresh_plugin_monitors(db)
+        return assets, proxmox_observations + plugin_observations
     finally:
         db.close()
 
@@ -57,11 +59,11 @@ def _refresh_health_once():
 async def _health_monitor_loop():
     while True:
         try:
-            systems, proxmox_observations = await asyncio.to_thread(_refresh_health_once)
+            systems, plugin_observations = await asyncio.to_thread(_refresh_health_once)
             for system in systems:
                 if system.get("observation"):
                     await observation_hub.broadcast(system["observation"])
-            for observation in proxmox_observations:
+            for observation in plugin_observations:
                 await observation_hub.broadcast(observation)
         except asyncio.CancelledError:
             raise

@@ -7,6 +7,7 @@ from app.models.connector import ConnectorModel
 from app.schemas.connectors import ConnectorCreate, ConnectorRead, ConnectorUpdate
 from app.schemas.vault import CredentialCreate
 from app.vault.service import vault_service
+from app.plugins.registry import plugin_registry
 
 class ConnectorService:
     def list(self, db: Session) -> list[ConnectorRead]:
@@ -42,6 +43,15 @@ class ConnectorService:
                 ),
             )
             credential_id = credential.id
+        plugin_manifest = plugin_registry.get_manifest(payload.connector_type)
+        if payload.connector_type not in {"webhook", "mqtt", "http_poll", "websocket", "proxmox"} and plugin_manifest:
+            credential_spec = plugin_manifest.get("credentials", {})
+            if payload.username and payload.password and credential_spec.get("credential_type"):
+                credential = vault_service.create_credential(
+                    db, CredentialCreate(name=payload.name + " " + plugin_manifest["name"] + " credentials",
+                    username=payload.username, password=payload.password,
+                    credential_type=credential_spec["credential_type"]))
+                credential_id = credential.id
         token = secrets.token_urlsafe(32) if payload.connector_type == "webhook" else None
         config = {}
         translation = payload.config.get("translation") or {}
@@ -69,13 +79,19 @@ class ConnectorService:
                 "tls": bool(payload.config.get("tls", False)),
                 "client_id": str(payload.config.get("client_id") or ("sentinel-" + uuid4().hex[:12])),
             })
+        if payload.connector_type not in {"webhook", "mqtt", "http_poll", "websocket", "proxmox"} and plugin_manifest:
+            for key, spec in plugin_manifest.get("configuration_schema", {}).items():
+                if key in payload.config:
+                    config[key] = payload.config[key]
+                elif "default" in spec:
+                    config[key] = spec["default"]
         model = ConnectorModel(
             id="conn_" + uuid4().hex,
             name=payload.name.strip(),
             connector_type=payload.connector_type,
-            direction="monitoring" if payload.connector_type == "proxmox" else "inbound",
+            direction="monitoring" if payload.connector_type == "proxmox" or (plugin_manifest and plugin_manifest.get("connection_mode") == "monitoring") else "inbound",
             enabled=payload.enabled,
-            status=("starting" if payload.enabled and payload.connector_type in {"mqtt", "http_poll", "websocket"}
+            status=("starting" if payload.enabled and (payload.connector_type in {"mqtt", "http_poll", "websocket"} or (plugin_manifest and plugin_manifest.get("connection_mode") == "monitoring"))
                     else "ready" if payload.enabled else "disabled"),
             config=config,
             credential_id=credential_id,

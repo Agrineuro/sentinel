@@ -58,12 +58,19 @@
       "id": "sentinel.connector.prometheus",
       "name": "Prometheus Metrics",
       "category": "Metrics",
-      "status": "planned",
-      "description": "Collect metrics from Prometheus-compatible endpoints without adding those libraries to Sentinel Core.",
+      "status": "available",
+      "description": "Read-only collection from Prometheus-compatible query APIs, with PromQL samples mapped into Sentinel assets.",
       "capabilities": [
-        "metrics collection"
+        "read-only monitoring",
+        "metric collection",
+        "asset discovery"
       ],
-      "source_path": null
+      "source_path": "plugins/packages/prometheus",
+      "connector_type": "prometheus",
+      "install_files": {
+        "manifest.json": "4590c6b4555f4c50b88a1db97baa46835faabccbbd4700d19d2c99fc86603c78",
+        "plugin.py": "9c43913102a3991457ac7db603e026e1de52de90bb5f0d862e181752c5d43ca7"
+      }
     },
     {
       "id": "sentinel.connector.docker",
@@ -76,6 +83,24 @@
         "asset discovery"
       ],
       "source_path": null
+    },
+    {
+      "id": "sentinel.connector.modbus-tcp",
+      "name": "Modbus TCP",
+      "category": "Industrial and IoT",
+      "status": "available",
+      "description": "Read-only polling of configured Modbus TCP holding registers through gateways and networked devices.",
+      "capabilities": [
+        "read-only monitoring",
+        "holding-register polling",
+        "asset discovery"
+      ],
+      "source_path": "plugins/packages/modbus_tcp",
+      "connector_type": "modbus_tcp",
+      "install_files": {
+        "manifest.json": "6df705d0bca59cd97f23973c16ba08692c588f63ebf193e811416a368e20d599",
+        "plugin.py": "bcb5ffd53eb9a9596f85616ed0aa3605efb06be61299282cbdb3432f485ada35"
+      }
     }
   ]
 }
